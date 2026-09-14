@@ -119,6 +119,9 @@
   .nhac{background:#fffbe8;padding:11px 16px;font-size:13px;line-height:1.5;color:#6b5900}
   .loi-o{color:var(--loi);font-size:13.5px;padding:10px 16px;display:none;background:var(--loi-nen)}
   .loi-o.hien{display:block}
+  /* Câu chờ dưới nút gửi phiếu — chỉ hiện khi máy chủ trả lời quá 8 giây */
+  .cho-mc{margin:10px 14px 0;padding:10px 12px;border-radius:9px;font-size:13.5px;line-height:1.55;color:var(--canh);background:var(--canh-nen);display:none}
+  .cho-mc.hien{display:block}
 
   .canhbao{margin:10px 14px 0;padding:12px 14px;border-radius:9px;font-size:13.5px;line-height:1.55;display:none}
   .canhbao.hien{display:block}
@@ -261,6 +264,8 @@
   </div>
 
   <button type="submit" class="nut" id="nut_dk">Xác nhận nộp</button>
+  <div class="cho-mc" id="cho_mc"></div>
+  <!-- ↑ Câu chờ (14/09/2026): máy chủ chậm thì nói thẳng vì sao lâu, và bảo ĐỪNG tải lại trang -->
   <!-- Chỉ hiện khi máy chủ xác nhận: đúng người đăng ký gốc + phiếu còn trong hạn sửa. -->
   <button type="button" class="nut sua an" id="nut_sua">ĐỔI phiếu sang nhà máy này</button>
   <button type="button" class="nut phu" id="nut_doi_mang">Đổi mảng / nhà máy</button>
@@ -1440,12 +1445,45 @@ $('form').addEventListener('submit', function (ev) {
 });
 
 /**
+ * Đồng hồ chờ trên nút gửi phiếu. Trả về hàm TẮT đồng hồ.
+ *
+ * LỖI THẬT 14/09/2026 (hệ thử): máy chủ trả lời 8-19 giây mỗi cú, cú đăng ký còn lâu hơn, mà nút chỉ
+ * ghi "Đang gửi…" nên trông như TREO. Người nhập tải lại trang giữa chừng → máy chủ VẪN ghi phiếu và
+ * VẪN xếp tin, nhưng không còn ai gọi gui_tin nên tin nằm kẹt (hệ đó lại chưa đặt lịch 5 phút).
+ * Nên: đếm giây ngay trên nút, qua 8 giây thì nói thẳng vì sao lâu và bảo ĐỪNG tải lại — cùng kiểu
+ * đồng hồ chờ của danhsach.html. Bộ kiểm: kiem/chodangky.test.mjs.
+ */
+function demGioCho(nut) {
+  var batDau = Date.now(), o = $('cho_mc');
+  function ve() {
+    var giay = Math.floor((Date.now() - batDau) / 1000);
+    nut.textContent = giay >= 3 ? 'Đang gửi… ' + giay + ' giây' : 'Đang gửi…';
+    if (giay < 8) return;
+    o.innerHTML = giay >= 60
+      ? 'Đã hơn 1 phút — mạng hoặc máy chủ đang rất chậm. <b>Cứ để trang mở</b>: hỏng thì trang sẽ báo ' +
+        'và cất phiếu lại để gửi lại.'
+      : 'Máy chủ Google đang xử lý — lần đầu trong ngày có thể mất 30–70 giây. <b>Đừng tải lại hay tắt ' +
+        'trang</b>: phiếu vẫn được lưu nhưng tin báo nhóm Zalo sẽ bị chậm.';
+    o.classList.add('hien');
+  }
+  ve();
+  var nhip = setInterval(ve, 1000);
+  return function () {
+    clearInterval(nhip);
+    o.classList.remove('hien');
+    o.innerHTML = '';
+  };
+}
+
+/**
  * Gửi hồ sơ. Nếu máy chủ trả CAN_XAC_NHAN (người này vừa đăng ký ở công ty khác)
  * thì hỏi người nhập, đồng ý mới gửi lại kèm cờ xác nhận — lúc đó vẫn đăng ký
  * và ghi rõ là trùng.
  */
 function guiDangKy(d, ten, nut) {
+  var dungDem = demGioCho(nut);
   goiAPI(d).then(function (kq) {
+    dungDem();
     if (kq.ok && kq.ma === 'CAN_XAC_NHAN') {
       nut.disabled = false; nut.textContent = 'Xác nhận nộp';
       var ds = (kq.danh_sach_trung || []).map(function (x) {
@@ -1473,6 +1511,10 @@ function guiDangKy(d, ten, nut) {
     veTinhTrang(kq);
     goiAPI({ token: TOKEN_API, hanh_dong: 'gui_tin' }).catch(function () {});
   }).catch(function () {
+    dungDem();
+    // Đứt giữa chừng thì máy chủ CÓ THỂ đã ghi phiếu và xếp tin rồi (lỗi thật 14/09/2026) — nhờ nó
+    // đẩy hàng đợi luôn. Hàng đợi trống thì cú gọi này không gửi gì, không hại gì.
+    goiAPI({ token: TOKEN_API, hanh_dong: 'gui_tin' }).catch(function () {});
     // Mất mạng giữa chừng: CẤT PHIẾU LẠI trong máy để không mất công gõ,
     // lần mở trang sau sẽ hiện nút gửi lại. Máy chủ vẫn soát trùng như thường
     // nên gửi lại không bao giờ sinh dòng kép.
