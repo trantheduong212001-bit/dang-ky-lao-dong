@@ -12,7 +12,7 @@
  *    cũ và bắn tin vào nhóm Zalo cũ — trông vẫn chạy bình thường, không báo lỗi gì.
  *    Máy chủ của hệ mới cũng phải khai ô dia_chi_trang (tab CAUHINH) trỏ về kho mới.
  *
- * Bản này thuộc hệ: https://cungungminhduc.github.io/dangky-lao-dong/
+ * Bản này thuộc hệ: https://trantheduong212001-bit.github.io/dang-ky-lao-dong/
  */
 var URL_API   = 'https://script.google.com/macros/s/AKfycbyTVKM348F35_JYjaQC_ZD9GzutpOQ5JeO2JZElgN90wPSEH4CAqqt84gOYhTi2Kw/exec';
 var TOKEN_API = '0a56b54fe2ed44369c5e91db';
