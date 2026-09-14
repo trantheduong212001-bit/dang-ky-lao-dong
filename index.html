@@ -142,6 +142,22 @@
   .tt .ma{display:inline-block;margin-top:14px;padding:9px 18px;background:#f2f4f6;
         border-radius:8px;font-size:19px;font-weight:700;letter-spacing:.5px}
 
+  /* ===== gửi ảnh thẻ CCCD sau khi đăng ký (bản 3.23) ===== */
+  .anhthe{margin:22px 0 0;padding:14px;border:1px solid var(--vien);border-radius:11px;
+          background:var(--the);text-align:left}
+  .anhthe b{font-size:15.5px}
+  .anhthe .mo{color:var(--mo);font-size:13px}
+  .anhthe p.mo{margin:10px 0 0}
+  .dong-anh{display:flex;align-items:center;gap:10px;margin-top:11px}
+  .nut-anh{flex:0 0 136px;padding:12px 8px;font-size:15px;font-weight:600;font-family:inherit;
+           border:1px solid var(--xanh);border-radius:9px;background:#fff;color:var(--xanh-dam);cursor:pointer}
+  .nut-anh:active{background:#e8f7ef}
+  .tt-anh{flex:1;font-size:13.5px;line-height:1.4;color:var(--mo)}
+  .tt-anh.xong{color:var(--tot);font-weight:600}
+  .tt-anh.loi{color:var(--loi)}
+  .tt-anh button{margin-left:6px;padding:4px 10px;font-size:13px;font-family:inherit;
+                 border:1px solid var(--loi);border-radius:7px;background:#fff;color:var(--loi);cursor:pointer}
+
   /* ===== danh sách đã nhập trong ngày ===== */
   /* Hai dòng thay vì một (bản 3.21.1): thêm số điện thoại mà vẫn để một dòng thì tên dài
      bị cắt mất trên màn hình điện thoại. Dòng trên là tên + giờ, dòng dưới là phần phụ. */
@@ -244,6 +260,9 @@
 </form>
 
 <input type="file" id="file_anh" accept="image/*" class="an">
+<!-- Ảnh thẻ gửi kèm SAU khi đăng ký (bản 3.23) — hai ô RIÊNG, không dùng chung ô đọc QR ở trên -->
+<input type="file" id="file_anh_truoc" accept="image/*" class="an">
+<input type="file" id="file_anh_sau" accept="image/*" class="an">
 <div id="anhtam"></div>
 
 <!-- ===== CHỌN NHÀ MÁY (có ô lọc) ===== -->
@@ -350,6 +369,8 @@ goiAPI({ token: TOKEN_API, hanh_dong: 'danh_sach_cong_ty' })
     // Danh sách ca đi chung cú gọi này (bản 3.21) — không đẻ thêm một cú mạng nữa,
     // mỗi cú tốn 1,8 giây đã đo ở bản 3.20.
     dsCa = (kq && kq.danh_sach_ca) || [];
+    // Gửi ảnh thẻ (bản 3.23): máy chủ chỉ báo BẬT/TẮT + trần KB, không bao giờ lộ id nhóm.
+    if (kq && kq.anh) anhCH = kq.anh;
     capNhatOCa();
     if (maCT) {
       var tim = dsCT.filter(function (c) { return c.ma_ct.toLowerCase() === maCT.toLowerCase(); })[0];
@@ -1546,14 +1567,161 @@ function veTinhTrang(kq) {
   }
   if (kq.canh_bao_cheo) them += '<p style="color:var(--canh)">(!) ' + thoat(kq.canh_bao_cheo) + '</p>';
 
+  // Khối gửi ảnh thẻ (bản 3.23): chỉ khi phiếu VỪA được nhận, có mã, và máy chủ báo đã bật.
+  var coAnh = loai === 'tot' && !!ma && anhCH.bat;
   $('man_tt').className = 'tt ' + loai;
   $('man_tt').innerHTML =
     '<div class="vong">' + dau + '</div><h2>' + tieu + '</h2>' +
     '<p>' + thoat(mo) + '</p>' + them +
     (ma ? '<div class="ma">' + thoat(ma) + '</div>' : '') +
-    '<button type="button" class="nut" onclick="location.reload()">Đăng ký người tiếp theo</button>';
+    (coAnh ? khoiAnhHTML() : '') +
+    '<button type="button" class="nut" onclick="sangNguoiTiep()">Đăng ký người tiếp theo</button>';
+  if (coAnh) ganKhoiAnh(ma);
   hien('man_tt');
 }
+
+// ====== ẢNH THẺ CCCD — gửi kèm SAU khi đăng ký (bản 3.23) ======
+/*
+ * Chạy khi phiếu ĐÃ nằm trong Sheet. Mỗi mặt một cú gọi, xếp hàng tuần tự, không chặn màn
+ * hình: người dùng bỏ đi lúc nào cũng được, phiếu không mất gì.
+ *
+ * Ba điều cố ý:
+ *   - Ảnh nén chỉ giữ trong BIẾN của trang, không cất vào bộ nhớ trình duyệt: điện thoại
+ *     dùng chung hay mất máy là lộ ảnh căn cước. Rời trang thì mất — đúng như mong muốn.
+ *   - Nén cạnh dài ≤ 1600 px, JPEG 0.8 rồi mới hạ dần: CCCD là giấy tờ phải ĐỌC ĐƯỢC,
+ *     nén quá tay là mất luôn mục đích của tính năng.
+ *   - Khối này chỉ hiện khi máy chủ báo đã bật (anhCH.bat). Hệ chưa khai nhóm nhận ảnh thì
+ *     cộng tác viên không phải thấy một cái nút bấm vào lần nào cũng hỏng.
+ */
+var anhCH = { bat: false, toi_da_kb: 800 };   // máy chủ gửi kèm trong danh_sach_cong_ty
+var anhMa = '', anhB64 = { truoc: '', sau: '' }, anhDangGui = 0, hangAnh = Promise.resolve();
+
+/** Mã lỗi mà gửi lại Y NGUYÊN ảnh cũ cũng không khá hơn — phải chọn ảnh khác hoặc báo quản trị. */
+var LOI_KHONG_GUI_LAI = ['ANH_KHONG_HOP_LE', 'CHUA_KHAI_NHOM', 'PHIEU_DA_KET_THUC', 'KHONG_CO_PHIEU', 'THIEU_MA'];
+
+function khoiAnhHTML() {
+  function dong(mat, nhan) {
+    return '<div class="dong-anh"><button type="button" class="nut-anh" data-mat="' + mat + '">📷 ' +
+           nhan + '</button><span class="tt-anh" id="tt_anh_' + mat + '">Chưa chọn ảnh</span></div>';
+  }
+  return '<div class="anhthe"><b>Gửi ảnh thẻ căn cước</b> <span class="mo">(không bắt buộc)</span>' +
+         dong('truoc', 'Mặt trước') + dong('sau', 'Mặt sau') +
+         '<p class="mo">Bỏ qua cũng được — phiếu đã lưu xong.</p></div>';
+}
+
+function ganKhoiAnh(ma) {
+  anhMa = ma;
+  anhB64 = { truoc: '', sau: '' };
+  Array.prototype.forEach.call(document.querySelectorAll('#man_tt .nut-anh'), function (n) {
+    n.addEventListener('click', function () { $('file_anh_' + n.getAttribute('data-mat')).click(); });
+  });
+}
+
+function ttAnh(mat, lop, html) {
+  var o = $('tt_anh_' + mat);
+  if (!o) return;
+  o.className = 'tt-anh' + (lop ? ' ' + lop : '');
+  o.innerHTML = html;
+}
+
+/** Số byte thật của chuỗi base64 — CÙNG phép tính với soatAnh_ ở máy chủ, để hai bên đếm như nhau. */
+function soByteB64(s) {
+  s = String(s || '');
+  var bu = s.slice(-2) === '==' ? 2 : (s.slice(-1) === '=' ? 1 : 0);
+  return Math.floor(s.length * 3 / 4) - bu;
+}
+
+/**
+ * Nén một ảnh: cạnh dài ≤ 1600 px, JPEG chất lượng 0.8. Vẫn quá trần thì hạ chất lượng
+ * 0.7 → 0.6 TRƯỚC, rồi mới thu nhỏ kích thước — giữ chữ trên thẻ đọc được lâu nhất có thể.
+ */
+function nenAnh(file) {
+  var tran = Math.floor((Number(anhCH.toi_da_kb) || 800) * 1024 * 0.95);   // chừa 5% cho chắc
+  return napAnh_(file).then(function (a) {
+    try {
+      var canh = 1600;
+      for (var vong = 0; vong < 4; vong++) {
+        var tile = Math.min(1, canh / Math.max(a.W, a.H));
+        var w = Math.max(1, Math.round(a.W * tile)), h = Math.max(1, Math.round(a.H * tile));
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        var x = c.getContext('2d');
+        x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);   // ảnh PNG nền trong suốt thì thành nền trắng, không bị đen
+        x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+        x.drawImage(a.ve, 0, 0, w, h);
+        var bac = [0.8, 0.7, 0.6];
+        for (var i = 0; i < bac.length; i++) {
+          var b64 = c.toDataURL('image/jpeg', bac[i]).replace(/^data:[^,]*,/, '');
+          // Chuỗi quá ngắn = trình duyệt vẽ hỏng (ra "data:," trơn) — đừng gửi thứ đó đi
+          if (b64.length > 200 && soByteB64(b64) <= tran) return b64;
+        }
+        canh = Math.round(canh * 0.75);
+      }
+      throw new Error('Ảnh vẫn quá lớn sau khi nén');
+    } finally { a.dong(); }
+  });
+}
+
+function chonAnh(mat, file) {
+  if (!file) return;
+  ttAnh(mat, '', 'Đang nén ảnh…');
+  nenAnh(file).then(function (b64) {
+    anhB64[mat] = b64;
+    guiAnh(mat);
+  }).catch(function () {
+    ttAnh(mat, 'loi', 'Không đọc được ảnh này. Chụp lại giúp nhé.');
+  });
+}
+
+function guiAnh(mat) {
+  var b64 = anhB64[mat];
+  if (!b64 || !anhMa) return;
+  var kb = Math.round(soByteB64(b64) / 1024);
+  anhDangGui++;
+  ttAnh(mat, '', 'Chờ gửi… (' + kb + ' KB)');
+  // XẾP HÀNG: mặt này xong mới tới mặt kia. Hai cú gọi Apps Script cùng lúc dễ đụng trần
+  // lượt gọi mỗi phút và tranh nhau khoá bảng tính.
+  hangAnh = hangAnh.then(function () {
+    ttAnh(mat, '', 'Đang gửi… (' + kb + ' KB)');
+    return goiAPI({ token: TOKEN_API, hanh_dong: 'gui_anh', ma_ld: anhMa, mat: mat, anh_b64: b64 })
+      .then(function (kq) {
+        if (kq && kq.ok) {
+          // Gửi xong thì bỏ ảnh khỏi bộ nhớ trang — trừ khi người dùng vừa chọn ảnh MỚI cho mặt này
+          if (anhB64[mat] === b64) anhB64[mat] = '';
+          ttAnh(mat, 'xong', '✓ Đã gửi vào nhóm');
+          return;
+        }
+        var guiLai = !(kq && LOI_KHONG_GUI_LAI.indexOf(kq.ma) >= 0);
+        ttAnh(mat, 'loi', thoat((kq && kq.loi) || 'Máy chủ không nhận ảnh') +
+          (guiLai ? ' <button type="button" data-guilai="' + mat + '">Gửi lại</button>' : ''));
+      }, function () {
+        ttAnh(mat, 'loi', 'Mất mạng, chưa gửi được. <button type="button" data-guilai="' + mat + '">Gửi lại</button>');
+      })
+      .then(function () { anhDangGui--; });
+  });
+}
+
+['truoc', 'sau'].forEach(function (mat) {
+  var o = $('file_anh_' + mat);
+  if (o) o.addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    chonAnh(mat, f);
+  });
+});
+
+document.addEventListener('click', function (e) {
+  var mat = (e.target && e.target.getAttribute) ? e.target.getAttribute('data-guilai') : '';
+  if (mat) guiAnh(mat);
+});
+
+/** Nút "Đăng ký người tiếp theo": ảnh còn đang gửi dở thì hỏi trước, đừng để mất lặng lẽ. */
+function sangNguoiTiep() {
+  if (anhDangGui > 0 && !confirm('Ảnh thẻ còn đang gửi dở.\n\nRời trang bây giờ thì ảnh đó KHÔNG tới được nhóm Zalo ' +
+      '(phiếu đăng ký vẫn còn nguyên).\n\nVẫn sang người tiếp theo?')) return;
+  location.reload();
+}
+// ====== HẾT ẢNH THẺ CCCD ======
 
 // ---------- Danh sách đã nhập hôm nay (lưu trong máy, KHÔNG lộ dữ liệu người khác) ----------
 function khoaNgay() { return 'ds_' + new Date().toISOString().substring(0, 10); }
