@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Đăng ký lao động</title>
+<style>
+  :root{
+    --nen:#f2f4f6; --the:#fff; --chu:#1b2430; --mo:#9aa3ad; --vien:#e9edf1;
+    --xanh:#12b76a; --xanh-dam:#0e9257;
+    --tot:#0f7a3d; --tot-nen:#e7f7ee;
+    --canh:#8a6300; --canh-nen:#fff6e0;
+    --loi:#b3261e; --loi-nen:#fdeceb;
+    --tv:#0b6b57; --ct:#6b4bbd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--nen);color:var(--chu);
+       font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .boc{max-width:560px;margin:0 auto;padding-bottom:30px}
+
+  /* ===== thanh trên cùng: nút ảnh | tên nhà máy | nút QR ===== */
+  .dinh{background:var(--the);display:flex;align-items:center;gap:12px;
+        padding:14px 16px;border-bottom:1px solid var(--vien)}
+  .dinh .bieu{flex:0 0 46px;height:46px;border:0;border-radius:10px;background:#f2f4f6;
+        display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .dinh .bieu:active{background:#e4e8ec}
+  .dinh .bieu svg{width:25px;height:25px;stroke:#3c4650;fill:none;stroke-width:1.8;
+        stroke-linecap:round;stroke-linejoin:round}
+  .dinh .giua{flex:1;min-width:0;text-align:center}
+  .dinh .giua b{display:block;font-size:17px;font-weight:700;letter-spacing:.3px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dinh .giua span{display:inline-block;margin-top:3px;padding:2px 10px;border-radius:999px;
+        font-size:10.5px;font-weight:700;letter-spacing:.6px}
+  .dinh .giua span.tv{background:#e6f4f0;color:var(--tv)}
+  .dinh .giua span.ct{background:#efeafa;color:var(--ct)}
+  .goiquet{text-align:center;font-size:12.5px;color:var(--mo);background:var(--the);
+        padding:0 16px 11px;border-bottom:1px solid var(--vien)}
+
+  /* ===== khối biểu mẫu kiểu danh sách ===== */
+  .khoi{background:var(--the);margin-top:10px;border-top:1px solid var(--vien);border-bottom:1px solid var(--vien)}
+  .hang{display:flex;align-items:center;gap:10px;padding:0 16px;min-height:54px;
+        border-top:1px solid #f2f4f6}
+  .hang:first-child{border-top:0}
+  .hang > span{flex:0 0 108px;font-size:15px}
+  .hang input,.hang select{flex:1;min-width:0;border:0;padding:15px 0;font-size:15.5px;
+        font-family:inherit;background:transparent;color:var(--chu);text-align:right;
+        -webkit-appearance:none;appearance:none}
+  .hang select{direction:rtl}
+  .hang input::placeholder{color:#c6ced6}
+  .hang input:focus,.hang select:focus{outline:0}
+  .hang.sai{background:#fff5f4}
+  /* Nút mở màn chọn nhà máy — trông y như ô select cũ để không ai phải học lại,
+     nhưng bấm vào thì mở ra danh sách CÓ Ô LỌC thay vì cuộn tay giữa 17 nhà máy. */
+  .honm{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:6px;
+        border:0;background:transparent;padding:15px 0;font:inherit;font-size:15.5px;
+        color:var(--chu);cursor:pointer;text-align:right}
+  .honm .mui{flex:none;color:#c3cad2;font-size:19px;line-height:1}
+  .honm b{font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .honm.trong b{color:#c6ced6}
+  .timnm{display:block;width:calc(100% - 28px);margin:10px 14px 0;padding:12px;font-size:15.5px;
+         font-family:inherit;border:1px solid #d9dde2;border-radius:10px;background:#fff}
+  .nmhang{display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid #f2f4f6;
+          width:100%;background:transparent;border-left:0;border-right:0;border-bottom:0;
+          font:inherit;text-align:left;color:var(--chu);cursor:pointer}
+  .nmhang:first-child{border-top:0}
+  .nmhang:active{background:#f6f8fa}
+  .nmhang.dang{background:var(--tot-nen)}
+  .nmhang .t{flex:1;min-width:0}
+  .nmhang .t b{display:block;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nmhang .t span{display:block;font-size:12.5px;color:var(--mo);margin-top:2px}
+  .nmhang .dau{flex:none;color:var(--tot);font-weight:700}
+  .nmtrong{padding:18px 16px;text-align:center;color:var(--mo);font-size:14px}
+
+  /* GIỚI TÍNH (bản 3.21.1) — trước đây là hai ô tròn radio nhỏ xíu: khó chạm trên điện
+     thoại, và bấm xong KHÔNG thấy phản ứng gì nên người nhập không biết đã chọn chưa.
+     Nay là hai nút to như nút chọn ca.
+     GIỮ NGUYÊN thẻ <input type=radio> bên trong (chỉ ẩn đi) — nhờ vậy hai chỗ mã đang đọc
+     `input[name=gt]` không phải sửa dòng nào, và bàn phím / trình đọc màn hình vẫn dùng được. */
+  .gt{display:flex;gap:8px;flex:1;padding:8px 0}
+  .gt-nut{flex:1;margin:0}
+  .gt-nut input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .gt-nut span{display:block;text-align:center;padding:11px 8px;border:1px solid #d9dde2;
+    background:#fff;border-radius:9px;font-size:14.5px;color:#3c4753;cursor:pointer}
+  /* Dùng `input:checked + span` chứ không dùng :has() — webview trong Zalo có thể còn cũ */
+  .gt-nut input:checked + span{background:#2d6cdf;border-color:#2d6cdf;color:#fff;font-weight:600}
+  .gt-nut input:focus-visible + span{outline:2px solid #2d6cdf;outline-offset:2px}
+  .gt label{display:flex;align-items:center;gap:8px;font-size:15px;margin:0;cursor:pointer}
+  .gt input{width:23px;height:23px;flex:none;accent-color:var(--xanh)}
+
+  .nut{display:block;width:calc(100% - 28px);margin:18px 14px 0;padding:16px;
+       font-size:17px;font-weight:600;font-family:inherit;border:0;border-radius:9px;
+       background:var(--xanh);color:#fff;cursor:pointer}
+  .nut:active{background:var(--xanh-dam)}
+  .nut[disabled]{opacity:.5}
+  .nut.phu{background:#eceff3;color:var(--chu)}
+  .nut.sua{background:#8a6300}
+  .nut.sua:active{background:#6b4e00}
+
+  /* nút tròn nổi góc phải */
+  .tron{position:fixed;right:14px;bottom:22px;width:82px;height:82px;border-radius:50%;
+        background:var(--xanh);color:#fff;border:0;font-family:inherit;font-size:12.5px;
+        font-weight:600;line-height:1.25;cursor:pointer;box-shadow:0 4px 14px rgba(18,183,106,.4);z-index:20}
+  .tron:active{background:var(--xanh-dam)}
+
+  /* ===== chọn mảng ===== */
+  .mang{padding:14px}
+  .mang button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+        background:var(--the);border:1px solid var(--vien);border-radius:11px;
+        padding:18px 16px;margin-bottom:11px;font-family:inherit;cursor:pointer;color:var(--chu)}
+  .mang button:active{background:#f6f8fa}
+  .mang .cham{flex:0 0 44px;height:44px;border-radius:11px;display:flex;align-items:center;
+        justify-content:center;font-size:19px;font-weight:700}
+  .mang .tv{background:#e6f4f0;color:var(--tv)} .mang .ct{background:#efeafa;color:var(--ct)}
+  .mang b{display:block;font-size:16.5px;margin-bottom:2px}
+  .mang small{display:block;font-size:13px;color:var(--mo);font-weight:400;line-height:1.4}
+
+  #vungquet{width:100%;background:#000;min-height:270px}
+  #anhtam{display:none}
+  .nhac{background:#fffbe8;padding:11px 16px;font-size:13px;line-height:1.5;color:#6b5900}
+  .loi-o{color:var(--loi);font-size:13.5px;padding:10px 16px;display:none;background:var(--loi-nen)}
+  .loi-o.hien{display:block}
+
+  .canhbao{margin:10px 14px 0;padding:12px 14px;border-radius:9px;font-size:13.5px;line-height:1.55;display:none}
+  .canhbao.hien{display:block}
+  .canhbao.vang{background:var(--canh-nen);color:#6b4e00;border:1px solid #f0dda0}
+  .canhbao.xanh{background:var(--tot-nen);color:#0a5c2f;border:1px solid #b6e2c8}
+
+  .tick{display:flex;gap:11px;align-items:flex-start;padding:14px 16px;font-size:13px;
+        line-height:1.5;color:var(--mo)}
+  .tick input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--xanh)}
+
+  /* ===== màn tình trạng ===== */
+  .tt{text-align:center;padding:34px 20px}
+  .tt .vong{width:66px;height:66px;border-radius:50%;margin:0 auto 14px;
+        display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700}
+  .tt.tot .vong{background:var(--tot-nen);color:var(--tot)}
+  .tt.canh .vong{background:var(--canh-nen);color:var(--canh)}
+  .tt.xau .vong{background:var(--loi-nen);color:var(--loi)}
+  .tt h2{margin:0 0 6px;font-size:21px}
+  .tt.tot h2{color:var(--tot)} .tt.canh h2{color:var(--canh)} .tt.xau h2{color:var(--loi)}
+  .tt p{margin:0 0 5px;color:var(--mo);font-size:14.5px}
+  .tt .ma{display:inline-block;margin-top:14px;padding:9px 18px;background:#f2f4f6;
+        border-radius:8px;font-size:19px;font-weight:700;letter-spacing:.5px}
+
+  /* ===== danh sách đã nhập trong ngày ===== */
+  /* Hai dòng thay vì một (bản 3.21.1): thêm số điện thoại mà vẫn để một dòng thì tên dài
+     bị cắt mất trên màn hình điện thoại. Dòng trên là tên + giờ, dòng dưới là phần phụ. */
+  .ds-hang{padding:12px 16px;border-top:1px solid #f2f4f6;font-size:14.5px}
+  .ds-hang:first-child{border-top:0}
+  .ds-hang .d1{display:flex;gap:10px;align-items:baseline}
+  .ds-hang .gio{margin-left:auto;font-size:12.5px;color:var(--mo);white-space:nowrap}
+  .ds-hang .d2{margin-top:3px;font-size:12.5px;color:var(--mo)}
+  /* Số điện thoại chạm được là gọi luôn — hay cần lúc phải hỏi lại người vừa đăng ký. */
+  .ds-hang .d2 a{color:#2d6cdf;text-decoration:none;font-weight:600}
+  .trong{padding:26px 16px;text-align:center;color:var(--mo);font-size:14.5px}
+  .an{display:none}
+  .ca-chon{display:flex;gap:8px;flex:1}
+  .ca-chon button{flex:1;padding:11px 8px;border:1px solid #d9dde2;background:#fff;
+    border-radius:9px;font-size:14.5px;color:#3c4753;cursor:pointer}
+  .ca-chon button.chon[data-ca="ngay"]{background:#f0a92a;border-color:#f0a92a;color:#fff;font-weight:600}
+  .ca-chon button.chon[data-ca="dem"]{background:#3b3f8f;border-color:#3b3f8f;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<div class="boc">
+
+<!-- ===== BƯỚC 1: CHỌN MẢNG ===== -->
+<div class="mang an" id="man_mang">
+  <div style="text-align:center;padding:16px 0 18px">
+    <b style="font-size:17px">ĐĂNG KÝ LAO ĐỘNG</b>
+    <div style="font-size:13px;color:var(--mo);margin-top:3px" id="phu_de">Chọn mảng lao động</div>
+  </div>
+  <button type="button" data-loai="thoi_vu">
+    <span class="cham tv">TV</span>
+    <span><b>Lao động thời vụ</b><small>Làm theo đợt, theo mùa vụ</small></span>
+  </button>
+  <button type="button" data-loai="chinh_thuc">
+    <span class="cham ct">CT</span>
+    <span><b>Lao động chính thức</b><small>Ký hợp đồng dài hạn với nhà máy</small></span>
+  </button>
+</div>
+
+<!-- ===== BƯỚC 2: BIỂU MẪU (hiện luôn, quét chỉ là điền hộ) ===== -->
+<form id="form" class="an">
+  <div class="dinh">
+    <button type="button" class="bieu" id="nut_anh" title="Lấy thông tin từ ảnh thẻ">
+      <svg viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-1.8h8.4L17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg>
+    </button>
+    <span class="giua">
+      <b id="ten_ct">ĐĂNG KÝ LAO ĐỘNG</b>
+      <span id="nhan_mang" class="an"></span>
+    </span>
+  </div>
+  <div class="goiquet">Bấm <b>máy ảnh</b> ở trên rồi <b>chụp mặt thẻ có mã QR</b> — hệ thống tự điền.
+    Chụp được riêng góc có mã QR thì càng chắc. Hoặc điền tay bên dưới.</div>
+
+  <div class="canhbao" id="canh_bao"></div>
+
+  <div class="khoi">
+    <div class="hang" id="hang_ct">
+      <span>Nhà máy</span>
+      <button type="button" class="honm trong" id="nut_chon_nm">
+        <b id="nm_nhan">Vui lòng chọn nhà máy</b><span class="mui">›</span></button>
+      <!-- Ô select vẫn nằm đây, chỉ bị ẩn đi: nó là NƠI GIỮ GIÁ TRỊ THẬT.
+           Nhờ vậy toàn bộ mã cũ (chonMang, chonNhaMay, bộ nghe sự kiện change, lúc gửi)
+           không phải sửa một dòng nào, chỉ thêm màn chọn có ô lọc ở phía trước. -->
+      <select id="ma_ct" class="an"><option value="">Vui lòng chọn nhà máy</option></select>
+    </div>
+    <div class="hang"><span id="nhan_ngay">Ngày đi làm</span>
+      <input id="ngay_lam_pv" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy"></div>
+    <!-- CA LÀM VIỆC (bản 3.21) — chỉ mảng THỜI VỤ, và ở đó thì bắt buộc.
+         Hai nút to thay ô sổ xuống: cộng tác viên hay nhập bằng điện thoại, một tay. -->
+    <div class="hang an" id="hang_ca"><span>Ca làm việc</span>
+      <div class="ca-chon" id="ca_chon"></div></div>
+    <div class="hang"><span>Tên</span><input id="ho_ten" placeholder="Xin vui lòng nhập tên" autocomplete="off"></div>
+    <div class="hang"><span>Giới tính</span>
+      <div class="gt">
+        <label class="gt-nut"><input type="radio" name="gt" value="Nam"><span>Nam</span></label>
+        <label class="gt-nut"><input type="radio" name="gt" value="Nữ"><span>Nữ</span></label>
+      </div>
+    </div>
+    <div class="hang"><span>Ngày sinh</span><input id="ngay_sinh" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy"></div>
+    <div class="hang"><span>Mobile</span><input id="sdt" inputmode="numeric" maxlength="10" placeholder="10 số, ví dụ 0912345678" autocomplete="off"></div>
+    <div class="hang"><span>CCCD</span><input id="so_cccd" inputmode="numeric" maxlength="14" placeholder="Xin vui lòng nhập số CCCD" autocomplete="off"></div>
+    <div class="hang"><span>Thường trú</span><input id="noi_thuong_tru" placeholder="Theo thẻ căn cước" autocomplete="off"></div>
+    <div class="hang"><span>Ghi chú</span><input id="ghi_chu" placeholder="Xin vui lòng điền vào ghi chú" autocomplete="off"></div>
+    <div class="hang"><span>Người tuyển dụng</span><input id="nguoi_nhap" placeholder="Tên bạn" autocomplete="off"></div>
+  </div>
+
+  <div class="loi-o" id="loi_form"></div>
+
+  <div class="khoi">
+    <label class="tick"><input type="checkbox" id="dong_y">
+      <span>Người đăng ký đồng ý cho xử lý <b>số CCCD, họ tên, ngày sinh, nơi thường trú, số điện thoại</b>
+      nhằm mục đích tuyển dụng và điều phối đón lao động; đồng ý gửi <b>họ tên và 4 số cuối CCCD</b>
+      vào <b>nhóm nội bộ của đội điều phối</b>; dữ liệu lưu trên <b>Google Sheets (máy chủ ở nước ngoài)</b>
+      tối đa <b>90 ngày</b>, có quyền yêu cầu xem, sửa hoặc xoá bất cứ lúc nào.</span></label>
+  </div>
+
+  <button type="submit" class="nut" id="nut_dk">Xác nhận nộp</button>
+  <!-- Chỉ hiện khi máy chủ xác nhận: đúng người đăng ký gốc + phiếu còn trong hạn sửa. -->
+  <button type="button" class="nut sua an" id="nut_sua">ĐỔI phiếu sang nhà máy này</button>
+  <button type="button" class="nut phu" id="nut_doi_mang">Đổi mảng / nhà máy</button>
+</form>
+
+<input type="file" id="file_anh" accept="image/*" class="an">
+<div id="anhtam"></div>
+
+<!-- ===== CHỌN NHÀ MÁY (có ô lọc) ===== -->
+<div id="man_nm" class="an">
+  <div style="text-align:center;padding:16px 0 6px"><b style="font-size:17px">CHỌN NHÀ MÁY</b>
+    <div style="font-size:13px;color:var(--mo);margin-top:3px" id="nm_tom">—</div></div>
+  <input id="nm_tim" class="timnm" placeholder="Gõ tên nhà máy để tìm — không cần dấu" autocomplete="off">
+  <div class="khoi"><div id="nm_noi"></div></div>
+  <button type="button" class="nut phu" id="nut_nm_huy">Quay lại</button>
+</div>
+
+<!-- ===== TÌNH TRẠNG ===== -->
+<div id="man_tt" class="an"></div>
+
+<!-- ===== DANH SÁCH ĐÃ NHẬP HÔM NAY ===== -->
+<div id="man_ds" class="an">
+  <div style="text-align:center;padding:16px 0 6px"><b style="font-size:17px">DANH SÁCH HÔM NAY</b>
+    <div style="font-size:13px;color:var(--mo);margin-top:3px" id="ds_tom">—</div></div>
+  <div class="khoi"><div id="ds_noi"></div></div>
+  <button type="button" class="nut phu" id="nut_dong_ds">Quay lại đăng ký</button>
+</div>
+
+</div>
+
+<button type="button" class="tron an" id="nut_ds">Xem danh sách tổng</button>
+
+<!-- jsQR: bộ giải ăn thẳng ImageData nên nhanh gấp chục lần scanFile,
+     nhờ vậy mới dò được hàng chục vùng mà vẫn kịp. -->
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- ZXing bản WASM — CHÍNH BỘ MÃ C++ mà Zalo dùng, biên dịch sang WebAssembly.
+     Đã BỎ html5-qrcode (ZXing viết lại bằng JavaScript): đo trên 4 ảnh thẻ thật
+     ngày 01/09 thì bản JavaScript đọc được 0/4, bản WASM đọc 4/4 và nhanh gấp ~20 lần
+     (~40ms/lượt thay vì ~1,1 giây). Bỏ nó còn tiết kiệm 330KB tải về. -->
+<script src="https://unpkg.com/zxing-wasm@3.1.3/dist/iife/reader/index.js"></script>
+<script>
+// ====== CẤU HÌNH ======
+var URL_API   = 'https://script.google.com/macros/s/AKfycby1EldZql-1j9H3vaoZdK2e7CfEHZAyyHW-SiTkY4rFWUrb-jHODY68x-OWGVAFlKzU/exec';
+var TOKEN_API = 'd905baa65db6457e830d8f40';
+// ======================
+
+var $ = function (id) { return document.getElementById(id); };
+var maCT = '', tenCT = '', loaiCT = '', qrTho = '', nguonNhap = 'tay';
+var dsCT = [], ngayCap = '', cmndCu = '';
+
+function hien(el) {
+  ['man_mang', 'form', 'man_nm', 'man_tt', 'man_ds'].forEach(function (i) { $(i).classList.add('an'); });
+  if (el) $(el).classList.remove('an');
+  $('nut_ds').classList.toggle('an', el !== 'form');
+  window.scrollTo(0, 0);
+}
+
+function goiAPI(body) {
+  return fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                          body: JSON.stringify(body) }).then(function (r) { return r.json(); });
+}
+
+function thoat(s) {
+  return String(s == null ? '' : s).replace(/[<>&]/g, function (m) {
+    return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m];
+  });
+}
+
+/**
+ * Số điện thoại di động Việt Nam: ĐÚNG 10 chữ số, bắt đầu bằng 0, số thứ hai là 3/5/7/8/9.
+ * Cả tính năng "gửi danh sách tên + SĐT cho người đón gọi" sống chết ở chỗ số gọi được.
+ */
+function sdtHopLe(s) { return /^0[35789]\d{8}$/.test(String(s || '')); }
+
+/**
+ * Kiểm ngày dd/mm/yyyy có THẬT SỰ tồn tại không — chặn 31/02, 45/13…
+ * Trả về số ngày cách hôm nay (âm = quá khứ), hoặc null nếu ngày sai.
+ */
+function ngayCachHomNay(s) {
+  var m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  var ng = +m[1], th = +m[2], nam = +m[3];
+  var d = new Date(nam, th - 1, ng);
+  // Ngày không tồn tại thì Date tự nhảy sang tháng sau — bắt bằng cách đối chiếu lại
+  if (d.getDate() !== ng || d.getMonth() !== th - 1 || d.getFullYear() !== nam) return null;
+  var nay = new Date(); nay.setHours(0, 0, 0, 0);
+  return Math.round((d - nay) / 86400000);
+}
+function loiSdt(s) {
+  s = String(s || '');
+  if (!s) return 'Chưa nhập số điện thoại';
+  if (s.length !== 10) return 'Số điện thoại phải đúng 10 chữ số, đang có ' + s.length + ' số';
+  return 'Số điện thoại phải bắt đầu bằng 03, 05, 07, 08 hoặc 09';
+}
+
+// ---------- Nạp danh sách nhà máy ----------
+maCT = decodeURIComponent((location.search.match(/[?&]ct=([^&]+)/) || [])[1] || '');
+
+goiAPI({ token: TOKEN_API, hanh_dong: 'danh_sach_cong_ty' })
+  .then(function (kq) {
+    dsCT = (kq && kq.danh_sach) || [];
+    // Danh sách ca đi chung cú gọi này (bản 3.21) — không đẻ thêm một cú mạng nữa,
+    // mỗi cú tốn 1,8 giây đã đo ở bản 3.20.
+    dsCa = (kq && kq.danh_sach_ca) || [];
+    capNhatOCa();
+    if (maCT) {
+      var tim = dsCT.filter(function (c) { return c.ma_ct.toLowerCase() === maCT.toLowerCase(); })[0];
+      if (tim) { chonMang(tim.loai); chonNhaMay(tim); return; }
+      alert('Link này không gắn với nhà máy nào đang tuyển. Bạn chọn thủ công giúp nhé.');
+    }
+    if (!dsCT.length) { $('phu_de').textContent = 'Chưa khai nhà máy nào trong hệ thống'; }
+    hien('man_mang');
+  })
+  .catch(function () { $('phu_de').textContent = 'Không kết nối được máy chủ'; hien('man_mang'); });
+
+// ---------- Ca làm việc (bản 3.21) ----------
+/*
+ * CHỈ mảng thời vụ mới có ca, và ở đó thì BẮT BUỘC — người đón cần biết ca để xếp xe và
+ * báo nhà máy. Mảng chính thức là phỏng vấn, ô này không hiện.
+ *
+ * Danh sách ca lấy từ máy chủ (ô CAUHINH `danh_sach_ca`), nên Dương thêm ca thứ ba là
+ * trang tự có thêm nút, không phải sửa file này.
+ */
+var dsCa = [], caDaChon = '';
+
+function veNutCa() {
+  var o = $('ca_chon');
+  if (!o) return;
+  o.innerHTML = dsCa.map(function (c) {
+    return '<button type="button" class="' + (caDaChon === c.ma ? 'chon' : '') +
+           '" data-ca="' + thoat(c.ma) + '">' + thoat(c.ten) + '</button>';
+  }).join('');
+}
+
+function chonCa(ma) {
+  caDaChon = ma;
+  veNutCa();
+  try { localStorage.setItem('ca_lam', ma); } catch (e) {}
+}
+
+document.addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('#ca_chon button[data-ca]') : null;
+  if (b) chonCa(b.getAttribute('data-ca'));
+});
+
+/** Hiện ô ca khi mảng là thời vụ, ẩn khi chính thức. */
+function capNhatOCa() {
+  var la = (loaiCT !== 'chinh_thuc');
+  $('hang_ca').classList.toggle('an', !la);
+  if (!la) caDaChon = '';                 // chính thức: không gửi ca nào lên
+  else if (!caDaChon) {
+    // Nhớ ca lần trước — cộng tác viên thường nhập cả loạt người cùng một ca.
+    try { caDaChon = localStorage.getItem('ca_lam') || ''; } catch (e) {}
+  }
+  veNutCa();
+}
+
+// ---------- Bước 1: chọn mảng ----------
+[].forEach.call(document.querySelectorAll('#man_mang button'), function (b) {
+  b.addEventListener('click', function () { chonMang(b.getAttribute('data-loai')); hien('form'); });
+});
+
+function chonMang(loai) {
+  loaiCT = loai;
+  capNhatOCa();
+  var n = $('nhan_mang');
+  n.textContent = loai === 'chinh_thuc' ? 'CHÍNH THỨC' : 'THỜI VỤ';
+  n.className = loai === 'chinh_thuc' ? 'ct' : 'tv';
+  // nạp lại danh sách nhà máy, chỉ của mảng vừa chọn
+  var sel = $('ma_ct');
+  sel.innerHTML = '<option value="">Vui lòng chọn nhà máy</option>';
+  dsCT.filter(function (c) { return c.loai === loai; }).forEach(function (c) {
+    var o = document.createElement('option');
+    o.value = c.ma_ct; o.textContent = c.ten_cong_ty;
+    sel.appendChild(o);
+  });
+  $('hang_ct').classList.remove('an');
+  $('ten_ct').textContent = loai === 'chinh_thuc' ? 'LAO ĐỘNG CHÍNH THỨC' : 'LAO ĐỘNG THỜI VỤ';
+  // MỘT ô ngày duy nhất, đổi nhãn theo mảng: chính thức thì đó là ngày PHỎNG VẤN,
+  // thời vụ thì là ngày ĐI LÀM. Người nhập không phải phân vân điền ô nào,
+  // và không còn cảnh bỏ trống cả hai ô như trước.
+  $('nhan_ngay').textContent = loai === 'chinh_thuc' ? 'Ngày phỏng vấn' : 'Ngày đi làm';
+  maCT = ''; tenCT = '';
+  veNhanNhaMay();
+}
+
+// ============================================================
+// CHỌN NHÀ MÁY — danh sách xếp A→Z (máy chủ xếp sẵn) + ô lọc không dấu
+// ============================================================
+/*
+ * Vì sao không để nguyên ô select: đến khoảng chục nhà máy trở lên thì bảng chọn của điện
+ * thoại chỉ còn là một dải cuộn dài, không gõ tìm được. Cộng tác viên đứng ngoài đường,
+ * một tay cầm thẻ căn cước, cuộn tìm tên nhà máy giữa danh sách dài là chỗ mất thời gian
+ * và chọn nhầm. Ô select vẫn nằm nguyên trong trang để giữ giá trị, chỉ bị ẩn đi.
+ */
+
+/** Bỏ dấu để lọc: gõ "vu hao" ra "VŨ HÀO". Khớp theo ĐẦU TỪ nên gõ "an" không lôi cả "Giang". */
+function khongDauNM(s) {
+  // Dải dấu thanh và chữ đ viết bằng MÃ \uXXXX chứ không dán ký tự thật vào regex:
+  // ký tự tổ hợp dán thẳng rất dễ bị một lần lưu khác bảng mã làm hỏng lặng lẽ — lúc đó
+  // ô lọc vẫn chạy nhưng gõ không dấu không ra ai, mà không báo lỗi gì cả.
+  if (!String.prototype.normalize) return String(s || '').toLowerCase();
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0111/g, 'd').replace(/\u0110/g, 'D').toLowerCase();
+}
+function khopNM(chuoi, cum) {
+  if (!cum) return true;
+  var tu = khongDauNM(chuoi).split(/[\s\-_.]+/);
+  return khongDauNM(cum).split(/\s+/).filter(String).every(function (c) {
+    return tu.some(function (t) { return t.indexOf(c) === 0; });
+  });
+}
+
+/** Chữ hiện trên hàng "Nhà máy" của biểu mẫu. */
+function veNhanNhaMay() {
+  var co = !!maCT;
+  $('nm_nhan').textContent = co ? tenCT : 'Vui lòng chọn nhà máy';
+  $('nut_chon_nm').classList.toggle('trong', !co);
+}
+
+function dsNhaMayCuaMang() {
+  return dsCT.filter(function (c) { return c.loai === loaiCT; });
+}
+
+function veDsNhaMay() {
+  var ds = dsNhaMayCuaMang();
+  var cum = $('nm_tim').value || '';
+  var h = '', hienRa = 0;
+  ds.forEach(function (c) {
+    if (!khopNM(c.ten_cong_ty + ' ' + c.ma_ct, cum)) return;
+    hienRa++;
+    h += '<button type="button" class="nmhang' + (c.ma_ct === maCT ? ' dang' : '') + '"'
+      +   ' data-ma="' + thoat(c.ma_ct) + '">'
+      +   '<span class="t"><b>' + thoat(c.ten_cong_ty) + '</b><span>' + thoat(c.ma_ct) + '</span></span>'
+      +   (c.ma_ct === maCT ? '<span class="dau">✓</span>' : '')
+      + '</button>';
+  });
+  if (!hienRa) {
+    h = '<div class="nmtrong">' + (cum ? 'Không có nhà máy nào khớp "' + thoat(cum) + '".'
+      : 'Chưa khai nhà máy nào cho mảng này.') + '</div>';
+  }
+  $('nm_noi').innerHTML = h;
+  [].forEach.call($('nm_noi').querySelectorAll('.nmhang'), function (b) {
+    b.addEventListener('click', function () {
+      var c = dsCT.filter(function (x) { return x.ma_ct === b.getAttribute('data-ma'); })[0];
+      if (c) chonNhaMay(c);
+    });
+  });
+}
+
+function moChonNhaMay() {
+  var ds = dsNhaMayCuaMang();
+  $('nm_tom').textContent = (loaiCT === 'chinh_thuc' ? 'Chính thức' : 'Thời vụ')
+    + ' · ' + ds.length + ' nhà máy · xếp A→Z';
+  // Ô lọc chỉ hiện khi danh sách đủ dài để phải cuộn. Vài nhà máy mà bày thêm ô nhập
+  // thì chỉ tổ chật màn hình và làm bàn phím bật lên che mất danh sách.
+  $('nm_tim').classList.toggle('an', ds.length <= 6);
+  $('nm_tim').value = '';
+  veDsNhaMay();
+  hien('man_nm');
+}
+
+$('nut_chon_nm').addEventListener('click', moChonNhaMay);
+$('nm_tim').addEventListener('input', veDsNhaMay);
+$('nut_nm_huy').addEventListener('click', function () { hien('form'); });
+
+function chonNhaMay(c) {
+  if (!c) return;
+  maCT = c.ma_ct; tenCT = c.ten_cong_ty;
+  $('ma_ct').value = maCT;
+  $('ten_ct').textContent = tenCT.toUpperCase();
+  veNhanNhaMay();
+  // Bắn sự kiện change của ô select ẩn: bộ nghe cũ vẫn chạy nguyên (tra tình trạng ngay
+  // khi đã có đủ 12 số CCCD). Nhờ vậy thêm màn chọn mới mà không đụng vào luồng cũ.
+  try { $('ma_ct').dispatchEvent(new Event('change')); } catch (e) {}
+  hien('form');
+}
+
+$('ma_ct').addEventListener('change', function () {
+  var c = dsCT.filter(function (x) { return x.ma_ct === this.value; }.bind(this))[0];
+  if (c) { maCT = c.ma_ct; tenCT = c.ten_cong_ty; $('ten_ct').textContent = tenCT.toUpperCase(); }
+  else { maCT = ''; $('ten_ct').textContent = loaiCT === 'chinh_thuc' ? 'LAO ĐỘNG CHÍNH THỨC' : 'LAO ĐỘNG THỜI VỤ'; }
+  var c2 = $('so_cccd').value.replace(/\D/g, '');
+  if (maCT && c2.length === 12) traTinhTrang(c2);
+});
+
+$('nut_doi_mang').addEventListener('click', function () { hien('man_mang'); });
+
+try { var l = localStorage.getItem('nguoi_nhap'); if (l) $('nguoi_nhap').value = l; } catch (e) {}
+
+// Mở trang là hỏi ngay: có phiếu nào lần trước gửi hỏng còn treo không?
+setTimeout(xemPhieuCho, 400);
+
+// ---------- Tách chuỗi QR trên thẻ căn cước ----------
+// 7 trường ngăn bằng |: sốCCCD | sốCMND9 | họ tên | ddMMyyyy sinh | giới tính | nơi thường trú | ddMMyyyy cấp
+// Lấy ĐỦ cả 7 trường; số CMND cũ và ngày cấp không hiện trên biểu mẫu nhưng vẫn lưu vào Sheet.
+function tachQR(chuoi) {
+  var s = String(chuoi == null ? '' : chuoi).trim();
+  var p = s.split('|');
+
+  // KHÔNG tin tuyệt đối rằng ô đầu tiên là số căn cước.
+  // Thẻ đời mới (từ 01/7/2024) hoặc máy đọc chèn thêm tiền tố sẽ làm lệch cả 7 ô.
+  // Cách chắc: tìm ô nào ĐÚNG 12 chữ số rồi coi ô đó là mốc, cắt bỏ phần thừa phía trước.
+  for (var i = 0; i < p.length && i < 4; i++) {
+    if (/^\s*\d{12}\s*$/.test(p[i])) { if (i > 0) p = p.slice(i); break; }
+  }
+
+  var ngay = function (s2) {
+    var d = String(s2 || '').replace(/\D/g, '');
+    return d.length === 8 ? d.substring(0, 2) + '/' + d.substring(2, 4) + '/' + d.substring(4) : '';
+  };
+
+  var cccd = String(p[0] || '').replace(/\D/g, '');
+  // Vẫn không ra 12 số → vớt vát: nhặt cụm 12 chữ số bất kỳ trong cả chuỗi.
+  // Thà lấy được mỗi số căn cước còn hơn bắt cộng tác viên gõ lại từ đầu.
+  if (cccd.length !== 12) {
+    var v = s.match(/(?:^|\D)(\d{12})(?:\D|$)/);
+    if (v) return { so_cccd: v[1], cmnd_cu: '', ho_ten: '', ngay_sinh: '',
+                    gioi_tinh: '', noi_thuong_tru: '', ngay_cap: '' };
+  }
+
+  var g = String(p[4] || '').trim();
+  return {
+    so_cccd: cccd,
+    cmnd_cu: String(p[1] || '').replace(/\D/g, ''),
+    ho_ten: String(p[2] || '').replace(/\s+/g, ' ').trim(),
+    ngay_sinh: ngay(p[3]),
+    gioi_tinh: /^n[ữu]/i.test(g) ? 'Nữ' : (/^nam/i.test(g) ? 'Nam' : ''),
+    noi_thuong_tru: String(p[5] || '').replace(/\s+/g, ' ').trim(),
+    ngay_cap: ngay(p[6])
+  };
+}
+
+/** Đọc được QR → tự điền vào biểu mẫu. Không đọc được → báo rõ là phải điền tay. */
+function nhanQR(chuoi, nguon) {
+  var t = tachQR(chuoi);
+  if (!t.so_cccd || t.so_cccd.length !== 12) {
+    hien('form');
+    baoDai('vang', '<b>Không đọc được mã QR trên thẻ.</b><br>' +
+      'Thẻ đời cũ có thể không có mã QR, hoặc mã bị mờ/xước. ' +
+      '<b>Bạn điền tay các ô bên dưới giúp nhé.</b>');
+    return;
+  }
+  qrTho = chuoi; nguonNhap = nguon;
+  $('so_cccd').value = t.so_cccd;
+  if (t.ho_ten) $('ho_ten').value = t.ho_ten;
+  if (t.ngay_sinh) $('ngay_sinh').value = t.ngay_sinh;
+  if (t.noi_thuong_tru) $('noi_thuong_tru').value = t.noi_thuong_tru;
+  if (t.gioi_tinh) {
+    var r = document.querySelector('input[name=gt][value="' + t.gioi_tinh + '"]');
+    if (r) r.checked = true;
+  }
+  ngayCap = t.ngay_cap; cmndCu = t.cmnd_cu;
+  hien('form');
+  baoDai('xanh', '<b>Đã đọc thẻ và tự điền xong.</b> Soát lại rồi bổ sung số điện thoại giúp nhé.');
+  if (maCT) traTinhTrang(t.so_cccd);
+  $('sdt').focus();
+}
+
+function baoDai(mau, html) {
+  var o = $('canh_bao');
+  o.innerHTML = html;
+  o.className = 'canhbao hien ' + mau;
+}
+
+// ---------- Tra tình trạng (chỉ tra, không ghi) ----------
+/**
+ * Phiếu cũ đang chờ SỬA sang nhà máy này (nếu có). Máy chủ chỉ trả về khi CHÍNH người
+ * đăng ký gốc đang thao tác và phiếu còn trong hạn sửa — trang không tự quyết định gì.
+ */
+var phieuSua = null;
+
+function traTinhTrang(cccd) {
+  phieuSua = null;
+  $('nut_sua').classList.add('an');
+  goiAPI({ token: TOKEN_API, hanh_dong: 'kiem_tra', so_cccd: cccd, ma_ct: maCT,
+           nguoi_nhap: ($('nguoi_nhap').value || '').trim() })
+    .then(function (kq) {
+      if (!kq.ok) return;
+      if (kq.ma === 'TRUNG') { veTinhTrang(kq); return; }
+      var tin = '';
+
+      // BẢN 3.21 — chính người đăng ký gốc đang thao tác, phiếu cũ còn trong hạn giữ chỗ.
+      // Dùng CHUNG nút với đường "đổi phiếu" cũ: cùng một hành động sua_dang_ky ở máy chủ,
+      // chỉ khác chữ trên nút và câu giải thích. Đẻ nút thứ hai chỉ làm màn hình rối.
+      if (kq.ma === 'CO_THE_MO_LAI' || kq.ma === 'CO_THE_SUA') {
+        phieuSua = { ma_ld: kq.ma_ld_sua, cong_ty_cu: kq.cong_ty_cu,
+                     ho_ten: kq.ho_ten, mo_lai: !!kq.co_the_mo_lai };
+        $('nut_sua').textContent = kq.co_the_mo_lai
+          ? ('MỞ LẠI phiếu ' + kq.ma_ld_sua)
+          : ('ĐỔI phiếu ' + kq.ma_ld_sua + ' sang ' + (tenCT || 'nhà máy này'));
+        $('nut_sua').classList.remove('an');
+        baoDai('vang', kq.co_the_mo_lai
+          ? ('<b>Người này đã báo KHÔNG ĐI</b> nên phiếu ' + thoat(kq.ma_ld_sua) +
+             ' ở "' + thoat(kq.cong_ty_cu) + '" đã huỷ — nhưng phiếu đó do chính bạn đăng ký.<br>' +
+             'Họ đổi ý thì bấm <b>MỞ LẠI phiếu</b> bên dưới, không cần đăng ký mới.')
+          : ('<b>Người này đang có phiếu ở "' + thoat(kq.cong_ty_cu) + '"</b> (' +
+             thoat(kq.ma_ld_sua) + ', do chính bạn đăng ký).<br>' +
+             'Bấm <b>ĐỔI phiếu</b> bên dưới để chuyển phiếu đó sang đây — không đẻ thêm phiếu mới.'));
+        return;
+      }
+
+      if (kq.ma === 'CAN_XAC_NHAN') {
+        if (kq.co_the_sua) {
+          // Chính người đăng ký gốc → mời SỬA phiếu cũ thay vì đẻ phiếu thứ hai.
+          phieuSua = { ma_ld: kq.ma_ld_sua, cong_ty_cu: kq.cong_ty_cu, ho_ten: kq.ho_ten };
+          $('nut_sua').textContent = 'ĐỔI phiếu ' + kq.ma_ld_sua + ' sang ' + (tenCT || 'nhà máy này');
+          $('nut_sua').classList.remove('an');
+          baoDai('vang', '<b>Người này đang có phiếu ở "' + thoat(kq.cong_ty_cu) + '"</b> ('
+            + thoat(kq.ma_ld_sua) + ', do chính bạn đăng ký).<br>'
+            + 'Bấm nút <b>ĐỔI phiếu</b> bên dưới để chuyển phiếu đó sang đây — '
+            + 'không đẻ thêm phiếu mới. Còn sửa được <b>' + kq.con_sua_ngay + ' ngày</b> nữa.');
+          return;
+        }
+        baoDai('vang', '<b>Người này vừa đăng ký ở công ty khác:</b><br>' + thoat(kq.trung_voi) +
+          '<br>Vẫn đăng ký được — bấm <b>Xác nhận nộp</b> rồi máy sẽ hỏi lại một lần nữa.');
+        return;
+      }
+      if (kq.ma === 'CHO_DANG_KY_LAI') {
+        tin = '<b>Người này đã từng đăng ký</b> (' + thoat(kq.ma_ld) + ', ' +
+              (kq.trang_thai_cu === 'da_don' ? 'đã được đón' : 'chưa đón') +
+              ', do "' + thoat(kq.nguoi_nhap_cu) + '" đăng ký). Đã quá hạn khoá nên <b>đăng ký lại được</b>.';
+      }
+      if (kq.canh_bao_cheo) tin += (tin ? '<br>' : '') + '(!) ' + thoat(kq.canh_bao_cheo);
+      if (tin) baoDai(kq.canh_bao_cheo ? 'vang' : 'xanh', tin);
+    })
+    .catch(function () {});
+}
+
+// ---------- Nút máy ảnh: lấy từ ảnh thẻ (ảnh KHÔNG rời khỏi máy) ----------
+// Đã BỎ hẳn đường quét trực tiếp bằng camera: thực tế dùng cho thấy không hiệu quả,
+// còn chụp ảnh thì ai cũng làm được. Một đường duy nhất thì cũng bớt chỗ hỏng.
+$('nut_anh').addEventListener('click', function () {
+  // KHÔNG chặn khi thư viện chưa tải được nữa: máy đời mới có bộ giải mã sẵn,
+  // vẫn đọc được ảnh dù mất mạng giữa chừng không lấy được thư viện.
+  if (typeof jsQR === 'undefined' && typeof ZXingWASM === 'undefined' &&
+      typeof BarcodeDetector === 'undefined') {
+    baoDai('vang', '<b>Chưa tải được bộ quét mã</b> (có thể do mạng). Bạn điền tay giúp nhé.'); return;
+  }
+  $('file_anh').click();
+});
+$('file_anh').addEventListener('change', function () {
+  var f = this.files && this.files[0]; this.value = '';
+  if (!f) return;
+  hien('form');
+  baoDai('vang', '<b>Đang đọc ảnh…</b>');
+  giaiMaTuNguon(f, function (b) { baoDai('vang', '<b>Đang đọc ảnh…</b><br>' + b); })
+    .then(function (t) {
+      f = null;
+      if (t) { nhanQR(t, 'qr_anh'); return; }
+      baoDai('vang', '<b>Không đọc được mã QR trong ảnh.</b><br>' +
+        'Đã dò khắp ảnh vẫn không ra. Cách chắc nhất: chụp lại <b>chỉ riêng ô mã QR</b> ' +
+        'cho gần đầy khung ảnh — mã sẽ to lên gấp nhiều lần. Tránh loá và giữ máy thật yên.<br>' +
+        'Hoặc <b>điền tay các ô bên dưới</b>.' +
+        '<br><span style="font-size:11px;opacity:.65">' + thoatHTML_(qrMoiTruong_()) + '</span>');
+    });
+});
+
+/**
+ * Đọc mã trong ẢNH bằng BỐN cách, thử lần lượt tới khi được.
+ * Bản cũ chỉ thử đúng một lượt rồi bỏ cuộc — mã QR thẻ căn cước in đè lên hoa văn nền,
+ * lại hay bị loá và chụp xa, nên một lượt trượt là chuyện thường.
+ * TOÀN BỘ chạy trong máy người dùng, ảnh KHÔNG rời khỏi máy (NĐ 356/2025).
+ */
+/** Thoát ký tự HTML — dòng chẩn đoán chỉ là chữ, không cho nó thành thẻ. */
+function thoatHTML_(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function docAnhNhieuLuot(nguon) { return giaiMaTuNguon(nguon, function () {}); }
+
+/* ============================================================================
+ * BỘ ĐỌC MÃ QR THẺ CĂN CƯỚC — bản 3.2
+ *
+ * Bản 3.2 (01/09) đổi BỘ GIẢI, không phải đổi cách dò.
+ * Dương gửi 4 ảnh thẻ mà Zalo đọc được còn trang thì không. Đo lại trên đúng thuật toán
+ * của trang: bản 3.1 đọc được 1/4, mỗi ca trượt ngồi dò 17–25 giây rồi mới chịu thua.
+ *
+ * Nguyên nhân gốc: `html5-qrcode` là ZXing VIẾT LẠI BẮNG JAVASCRIPT, yếu hơn hẳn bản
+ * C++ gốc mà Zalo dùng. Đo thật: cắt sát ô mã rồi đưa cho nó ở 24 cỡ × 5 chế độ khác
+ * nhau, thẻ Đặng Thành Luân vẫn 0/120 lượt. Cùng tấm ảnh đó, ZXing bản WASM đọc
+ * được. Không phải dò sai chỗ — là đưa đúng chỗ mà bộ giải không đủ khoẻ.
+ *
+ *   Bản 3.1 (html5-qrcode)  : 1/4 thẻ · 17–25 giây mỗi ca trượt
+ *   Bản 3.2 (ZXing-WASM)    : 4/4 thẻ · chậm nhất 4,6 giây · 2/4 xong trong 0,1 giây
+ *
+ * Bản WASM còn rẻ tới mức (~40ms/lượt thay vì ~1,1 giây) nên không phải để dành nó
+ * cho một chặng riêng nữa: nay nó chạy ở MỌI lượt, ngay cạnh jsQR.
+ *
+ * ---------------------------------------------------------------------------
+ * Bản 3.0 (29/08) đưa số thẻ đọc được từ 1/7 lên 6/7 trên máy tính và Android,
+ * nhưng iPhone thì trượt sạch. Ba chỗ, cả ba chỉ hỏng trên Safari của iOS:
+ *
+ *   1. MỖI LƯỢT DÒ TẠO MỘT CANVAS MỚI — một ảnh khó tốn tới ~65 lượt, mỗi canvas
+ *      1100×1100 chiếm 4,8 MB, cộng lại hơn 300 MB. Safari trên iOS có TRẦN BỘ NHỚ
+ *      CANVAS cứng (khoảng 224 MB); vượt trần thì canvas trả về TRẮNG TRƠN chứ không
+ *      báo lỗi — nên mọi lượt sau đó đọc trượt hết mà không ai biết vì sao.
+ *      Chrome trên máy tính và Android không có trần này nên vẫn chạy ngon.
+ *      → Nay DÙNG LẠI đúng MỘT canvas cho mọi lượt.
+ *
+ *   2. LÀM MỜ BẰNG ctx.filter — Safari mãi tới bản 17.0 mới có `filter` cho canvas.
+ *      Trên iOS cũ hơn, hai chế độ "mượt" lặng lẽ không làm gì, thành ra trùng
+ *      với hai chế độ khác: mất 2 trong 5 nước cờ mà không hay.
+ *      → Nay tự làm mờ bằng tay trên mảng xám, chạy được ở mọi trình duyệt.
+ *
+ *   3. createImageBitmap KHÔNG CÓ ĐƯỜNG LUI — Safari mới có từ bản 15, mà lỗi thì
+ *      bị `.catch` nuốt trọn, trả về chuỗi rỗng y như "không đọc được".
+ *      → Nay hỏng thì lùi về thẻ <img> thường, vẫn chạy.
+ *
+ * ---------------------------------------------------------------------------
+ * Vì sao phải viết lại từ 3.0: bản 2.x dò 9 ô theo TỈ LỆ ẢNH (ảnh dọc → ô dọc dài
+ * ngoẵng, ô mã chỉ chiếm một góc nhỏ trong đó nên bộ giải mù), và tệ hơn: hễ máy có
+ * sẵn BarcodeDetector là nó BỎ LUÔN thư viện ZXing — trên Android chỉ còn MỘT bộ giải.
+ *
+ * Bốn chặng, rẻ trước đắt sau, ra kết quả là dừng:
+ *   Chặng 0 — đưa THẮNG tệp ảnh gốc cho ZXing-WASM. Không canvas, không thu nhỏ,
+ *             không cắt vùng. Đo thật: 2/4 thẻ xong ngay ở đây trong ~40–110ms.
+ *             Đây cũng là đường an toàn nhất cho iPhone: không đụng canvas thì
+ *             không bao giờ chạm trần bộ nhớ canvas của Safari.
+ *   Chặng 1 — nguyên ảnh qua canvas, 2 chế độ. Cứu ca WASM chưa tải kịp và ca
+ *             phải đổi cách xám hoá mới đọc được.
+ *   Chặng A — DÒ Ô ĐỊNH VỊ (finder pattern 1:1:3:1:1) để biết mã nằm ĐÂU, rồi cắt sát
+ *             quanh đó. Đây là cách máy quét thật vẫn làm. Đo trên ảnh thật: chỉ giải
+ *             được khi ô mã chiếm ≥ ~50% khung cắt.
+ *   Chặng C — quét lưới Ô VUÔNG toàn ảnh, phòng khi dò mốc trượt.
+ *
+ * Mỗi lượt ở chặng 1/A/C chạy ba bộ giải nối tiếp:
+ *   jsQR (~10ms) → ZXing-WASM (~40ms) → bộ giải sẵn của máy (Android: ML Kit của Google).
+ *
+ * Mỗi vùng thử lần lượt 5 cách xử lý ảnh:
+ *   gốc · kênh sáng nhất · mượt+sáng nhất · ngưỡng cục bộ · mượt+cục bộ
+ * "Kênh sáng nhất" = lấy max(R,G,B) thay cho xám thường: nền bảo an thẻ căn cước
+ * in màu xanh lơ, xám thường bóp tương phản mã xuống, max(R,G,B) thì không.
+ * "Mượt" = làm nhoè nhẹ, cứu các thẻ đã mòn/rỗ mặt.
+ *
+ * TOÀN BỘ chạy trong máy người dùng, ảnh KHÔNG rời khỏi máy (NĐ 356/2025).
+ * ========================================================================== */
+
+/**
+ * HẠN GIỜ CỨNG. Không có nó thì ảnh không đọc nổi sẽ dò hết mọi vùng × mọi chế độ —
+ * đo thật: quá 10 phút mới chịu thua, cộng tác viên tưởng máy treo và tắt trang.
+ * Đo trên ảnh thẻ thật: ca đọc được chậm nhất mất ~14 giây, nên để 25 giây là
+ * vừa rộng cho ca khó mà vẫn dừng sớm để người dùng còn kịp chụp lại hoặc điền tay.
+ */
+var QR_HAN_GIO_MS = 25000;
+
+/** 5 cách xử lý ảnh trước khi giải, xếp từ rẻ tới đắt. */
+var CHE_DO_QR = [
+  { ten: 'gốc',            xam: 0, mo: 0, cucbo: 0 },
+  { ten: 'kênh sáng nhất', xam: 1, mo: 0, cucbo: 0 },
+  { ten: 'mượt+sáng nhất', xam: 1, mo: 1, cucbo: 0 },
+  { ten: 'ngưỡng cục bộ',  xam: 1, mo: 0, cucbo: 1 },
+  { ten: 'mượt+cục bộ',    xam: 1, mo: 1, cucbo: 1 }
+];
+
+/**
+ * HAI canvas dùng chung cho cả phiên, KHÔNG bao giờ tạo thêm.
+ * Đây là chỗ chữa lỗi iPhone: gán lại width/height vừa xoá sạch canvas vừa trả lại
+ * vùng nhớ cũ, nên dù dò 65 lượt thì lúc nào cũng chỉ có hai canvas sống.
+ */
+var QR_KHUNG = null, QR_KHUNG_MOC = null;
+
+function layKhung_(kho, W, H) {
+  var c = kho || document.createElement('canvas');
+  c.width = W; c.height = H;              // gán lại = xoá sạch + trả vùng nhớ cũ
+  return c;
+}
+/** Trả lại vùng nhớ khi dò xong — iPhone giữ backing store lâu hơn máy khác. */
+function traKhung_() {
+  if (QR_KHUNG) { QR_KHUNG.width = 1; QR_KHUNG.height = 1; }
+  if (QR_KHUNG_MOC) { QR_KHUNG_MOC.width = 1; QR_KHUNG_MOC.height = 1; }
+}
+
+/**
+ * Làm mờ nhẹ bằng tay (hộp 3×3, tách ngang rồi dọc) trên mảng xám.
+ * Thay cho ctx.filter='blur()' vì Safari dưới bản 17 không có filter cho canvas.
+ * Tự làm thì chạy giống hệt nhau ở mọi máy — đỡ phải đoán máy nào hỗ trợ gì.
+ */
+function moMang_(g, W, H) {
+  var tam = new Uint8Array(W * H), x, y, k, s, n, i;
+  for (y = 0; y < H; y++) {
+    i = y * W;
+    for (x = 0; x < W; x++) {
+      s = 0; n = 0;
+      for (k = -1; k <= 1; k++) { var xx = x + k; if (xx >= 0 && xx < W) { s += g[i + xx]; n++; } }
+      tam[i + x] = s / n;
+    }
+  }
+  for (y = 0; y < H; y++) {
+    for (x = 0; x < W; x++) {
+      s = 0; n = 0;
+      for (k = -1; k <= 1; k++) { var yy = y + k; if (yy >= 0 && yy < H) { s += tam[yy * W + x]; n++; } }
+      g[y * W + x] = s / n;
+    }
+  }
+}
+
+/**
+ * Cắt vùng {sx,sy,sw,sh} rồi đưa cạnh dài về v.norm điểm ảnh (phóng to HOẶC thu nhỏ).
+ * Phóng to không tạo thêm chi tiết, nhưng khi ảnh nằm sát ngưỡng thì nó giúp
+ * bộ giải bắt được lưới ô.
+ */
+function veVung_(A, v, che) {
+  var r = v.norm / Math.max(v.sw, v.sh);
+  var W = Math.max(1, Math.round(v.sw * r)), H = Math.max(1, Math.round(v.sh * r));
+  var c = QR_KHUNG = layKhung_(QR_KHUNG, W, H);
+  var ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(A.ve, v.sx, v.sy, v.sw, v.sh, 0, 0, W, H);
+  if (!che || (!che.xam && !che.cucbo && !che.mo)) return c;
+
+  var d = ctx.getImageData(0, 0, W, H), a = d.data, i, p;
+  var g = new Uint8Array(W * H);
+  for (i = 0; i < W * H; i++) {
+    p = i * 4;
+    g[i] = che.xam ? Math.max(a[p], a[p + 1], a[p + 2])
+                   : (a[p] * 0.299 + a[p + 1] * 0.587 + a[p + 2] * 0.114) | 0;
+  }
+  if (che.mo) moMang_(g, W, H);
+  if (che.cucbo) {
+    // Ngưỡng riêng cho từng khối 16×16: một góc bị loá, một góc trong bóng râm
+    // thì ngưỡng chung sẽ đẩy bên sáng thành trắng hết, bên tối thành đen hết.
+    var bw = Math.ceil(W / 16), bh = Math.ceil(H / 16), bx, by, x2, y2, s, n, yy, xx, ng;
+    for (by = 0; by < H; by += bh) for (bx = 0; bx < W; bx += bw) {
+      x2 = Math.min(bx + bw, W); y2 = Math.min(by + bh, H); s = 0; n = 0;
+      for (yy = by; yy < y2; yy++) for (xx = bx; xx < x2; xx++) { s += g[yy * W + xx]; n++; }
+      ng = n ? s / n : 128;
+      for (yy = by; yy < y2; yy++) for (xx = bx; xx < x2; xx++) {
+        p = (yy * W + xx) * 4;
+        a[p] = a[p + 1] = a[p + 2] = g[yy * W + xx] > ng - 3 ? 255 : 0;
+      }
+    }
+  } else {
+    for (i = 0; i < W * H; i++) { p = i * 4; a[p] = a[p + 1] = a[p + 2] = g[i]; }
+  }
+  ctx.putImageData(d, 0, 0);
+  return c;
+}
+
+/**
+ * Dò Ô ĐỊNH VỊ của mã QR — ba ô vuông to ở ba góc mã, quét ngang hay quét dọc
+ * qua tâm chúng đều cho dãy đen-trắng-đen-trắng-đen theo tỉ lệ 1:1:3:1:1.
+ * Không dấu hiệu nào khác trên thẻ có tỉ lệ này, nên đây là cách tìm mã đáng tin nhất.
+ * Chạy trên bản thu nhỏ (900 hoặc 1200 điểm ảnh) nên chỉ tốn ~50–80 mili giây.
+ */
+function doMoc_(A, coQuet) {
+  var W = A.W, H = A.H;
+  var w = Math.min(coQuet || 900, W), h = Math.max(1, Math.round(H * w / W)), ti = W / w;
+  var c = QR_KHUNG_MOC = layKhung_(QR_KHUNG_MOC, w, h);
+  var x = c.getContext('2d', { willReadFrequently: true });
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(A.ve, 0, 0, w, h);
+  var a = x.getImageData(0, 0, w, h).data, g = new Uint8Array(w * h), i, p, yy, xx;
+  for (i = 0; i < w * h; i++) { p = i * 4; g[i] = Math.max(a[p], a[p + 1], a[p + 2]); }
+
+  var bw = Math.ceil(w / 20), bh = Math.ceil(h / 20), bn = new Uint8Array(w * h);
+  for (var by = 0; by < h; by += bh) for (var bx = 0; bx < w; bx += bw) {
+    var X2 = Math.min(bx + bw, w), Y2 = Math.min(by + bh, h), s = 0, n = 0;
+    for (yy = by; yy < Y2; yy++) for (xx = bx; xx < X2; xx++) { s += g[yy * w + xx]; n++; }
+    var ng = n ? s / n : 128;
+    for (yy = by; yy < Y2; yy++) for (xx = bx; xx < X2; xx++) bn[yy * w + xx] = g[yy * w + xx] < ng - 2 ? 1 : 0;
+  }
+
+  function hop(r) {                       // r = 5 độ dài dải liên tiếp, bắt đầu bằng ĐEN
+    var t = r[0] + r[1] + r[2] + r[3] + r[4];
+    if (t < 7) return 0;
+    var m = t / 7, sai = m * 0.6;
+    return (Math.abs(m - r[0]) < sai && Math.abs(m - r[1]) < sai && Math.abs(3 * m - r[2]) < 3 * sai &&
+            Math.abs(m - r[3]) < sai && Math.abs(m - r[4]) < sai) ? m : 0;
+  }
+  var diem = [];
+  function quet(ngang) {
+    var L = ngang ? h : w, K = ngang ? w : h, u, v;
+    for (u = 0; u < L; u += 2) {
+      var r = [0, 0, 0, 0, 0], mau = 0;
+      for (v = 0; v < K; v++) {
+        var val = ngang ? bn[u * w + v] : bn[v * w + u];
+        if (val === mau) { r[4]++; }
+        else {
+          if (mau === 1) {
+            var m = hop(r);
+            if (m) {
+              var tam = v - r[4] - r[3] - r[2] / 2;
+              diem.push(ngang ? { x: tam, y: u, m: m } : { x: u, y: tam, m: m });
+            }
+          }
+          r = [r[1], r[2], r[3], r[4], 1]; mau = val;
+        }
+      }
+    }
+  }
+  quet(true); quet(false);
+
+  var cum = [];                            // gộp các lần bắt trúng cùng một ô định vị
+  diem.forEach(function (d) {
+    for (var k = 0; k < cum.length; k++) {
+      var q = cum[k];
+      if (Math.abs(q.x - d.x) < d.m * 2.5 && Math.abs(q.y - d.y) < d.m * 2.5 && Math.abs(q.m - d.m) < d.m * 0.6) {
+        q.x = (q.x * q.n + d.x) / (q.n + 1); q.y = (q.y * q.n + d.y) / (q.n + 1);
+        q.m = (q.m * q.n + d.m) / (q.n + 1); q.n++; return;
+      }
+    }
+    cum.push({ x: d.x, y: d.y, m: d.m, n: 1 });
+  });
+  return cum.filter(function (q) { return q.n >= 3; })
+            .sort(function (A2, B2) { return B2.n - A2.n; }).slice(0, 12)
+            .map(function (q) { return { x: q.x * ti, y: q.y * ti, m: q.m * ti, n: q.n }; });
+}
+
+/** Từ các mốc dò được, dựng vùng cắt sát quanh mã. */
+function vungTuMoc_(A) {
+  // Dò ở HAI cỡ rồi gộp. Cỡ 900 rẻ và ăn ảnh thường; cỡ 1200 mới bắt được ô định vị
+  // của mã nhỏ (đo thật: ảnh 1920×2560 có mã rộng 167 điểm ảnh, ở cỡ 900 mỗi ô vuông
+  // chỉ còn 1,7 điểm nên dãy 1:1:3:1:1 nát). Chỉ dùng cỡ 1200 thì lại đổi thứ hạng cụm
+  // và làm hỏng ảnh khác — nên gộp cả hai, cụm nào cả hai cỡ đều thấy thì tự khắc lên đầu.
+  var W = A.W, H = A.H, nhom = [];
+  var cum = doMoc_(A, 900);
+  if (W > 1300) cum = cum.concat(doMoc_(A, 1200));
+  cum.forEach(function (q) {                // ba ô định vị của cùng một mã nằm gần nhau
+    for (var k = 0; k < nhom.length; k++) {
+      var G = nhom[k];
+      if (Math.abs(G.x - q.x) < q.m * 50 && Math.abs(G.y - q.y) < q.m * 50 && Math.abs(G.m - q.m) / G.m < 0.8) {
+        G.x1 = Math.min(G.x1, q.x); G.y1 = Math.min(G.y1, q.y);
+        G.x2 = Math.max(G.x2, q.x); G.y2 = Math.max(G.y2, q.y);
+        G.x = (G.x1 + G.x2) / 2; G.y = (G.y1 + G.y2) / 2;
+        G.m = (G.m * G.n + q.m * q.n) / (G.n + q.n); G.n += q.n; return;
+      }
+    }
+    nhom.push({ x: q.x, y: q.y, x1: q.x, y1: q.y, x2: q.x, y2: q.y, m: q.m, n: q.n });
+  });
+  nhom.sort(function (X, Y) { return Y.n - X.n; });
+  var ra = [];
+  nhom.slice(0, 6).forEach(function (G, i) {
+    var trai = Math.max(G.x2 - G.x1, G.y2 - G.y1);
+    var nhieuMoc = trai > G.m * 10;
+    var so = 0;
+    function them(sx, sy, s) {
+      if (s < 60) return;
+      if (s > Math.min(W, H)) s = Math.min(W, H);
+      ra.push({
+        ten: 'mốc' + (i + 1) + '#' + so, dau: so === 0, norm: 1100,
+        sx: Math.max(0, Math.min(W - s, Math.round(sx))),
+        sy: Math.max(0, Math.min(H - s, Math.round(sy))),
+        sw: s, sh: s
+      });
+      so++;
+    }
+    var co = [Math.round(G.m * 45), Math.round(G.m * 30), Math.round(G.m * 65)];
+    if (nhieuMoc) co.unshift(Math.round(trai * 1.5));  // bắt được ≥2 mốc thì dùng luôn khoảng cách giữa chúng
+    them(G.x - co[0] / 2, G.y - co[0] / 2, co[0]);
+
+    // Chỉ bắt được MỘT ô định vị thì lấy nó làm tâm là sai: ô định vị nằm ở GÓC mã,
+    // nên mã trải về một trong bốn hướng chéo. Đo trên ảnh thật (Đăng Thành Luân,
+    // 1920×2560, mã rộng 167 điểm ảnh): bắt trúng ô định vị góc dưới-trái mà cắt lấy
+    // tâm thì khung lệch hẳn khỏi mã. Nay thử cả bốn hướng, hết 4 lượt mà chắc ăn.
+    if (!nhieuMoc && i < 1) {   // chỉ cụm mạnh nhất, thêm nữa thì chậm mà không cứu thêm ca nào
+      var S = Math.round(G.m * 45 * 1.35), le = S * 0.18;
+      [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (h) {
+        them(h[0] > 0 ? G.x - le : G.x + le - S,
+             h[1] > 0 ? G.y - le : G.y + le - S, S);
+      });
+    }
+    for (var j = 1; j < co.length; j++) them(G.x - co[j] / 2, G.y - co[j] / 2, co[j]);
+  });
+  return ra;
+}
+
+/**
+ * Lưới ô VUÔNG (không theo tỉ lệ ảnh — đây chính là chỗ bản 2.x sai), cạnh = fr × chiều
+ * rộng ảnh, chồng mép 50% nên mã nằm vắt qua ranh giới vẫn có một ô chứa trọn.
+ * Xếp ô sát mép ngang lên trước vì mã căn cước luôn ở mép thẻ.
+ */
+function oVuong_(W, H, fr, norm) {
+  var s = Math.floor(W * fr);
+  if (s < 80) return [];
+  if (s > Math.min(W, H)) s = Math.min(W, H);
+  var b = Math.max(1, Math.floor(s * 0.5)), xs = [], ys = [], o = [], x, y;
+  for (x = 0; x + s <= W; x += b) xs.push(x);
+  if (xs[xs.length - 1] !== W - s) xs.push(W - s);
+  for (y = 0; y + s <= H; y += b) ys.push(y);
+  if (ys[ys.length - 1] !== H - s) ys.push(H - s);
+  xs.forEach(function (X) {
+    ys.forEach(function (Y) {
+      var dx = Math.min(X, W - s - X) / W, dy = Math.abs((Y + s / 2) / H - 0.5);
+      o.push({
+        ten: 'ô' + fr + '(' + Math.round((X + s / 2) / W * 100) + ',' + Math.round((Y + s / 2) / H * 100) + ')',
+        sx: X, sy: Y, sw: s, sh: s, norm: norm, uu: dx * 2 + dy
+      });
+    });
+  });
+  return o.sort(function (P, Q) { return P.uu - Q.uu; });
+}
+
+/** Kế hoạch quét lưới: đã gộp sẵn cặp {vùng, chế độ} theo đúng thứ tự sẽ thử. */
+function keHoachLuoi_(W, H) {
+  var ke = [], toan = { ten: 'toàn ảnh', sx: 0, sy: 0, sw: W, sh: H, norm: 1200 };
+  ke.push({ v: toan, m: 0 }); ke.push({ v: toan, m: 1 });
+  var t35 = oVuong_(W, H, 0.35, 1100), t55 = oVuong_(W, H, 0.55, 1100), t24 = oVuong_(W, H, 0.24, 900);
+  [0, 1, 2, 3, 4].forEach(function (m) {
+    var lim = m === 0 ? 18 : (m < 3 ? 14 : 8);
+    [t35, t55, t24].forEach(function (ds) {
+      for (var k = 0; k < ds.length && k < lim; k++) ke.push({ v: ds[k], m: m });
+    });
+  });
+  return ke;
+}
+
+/** Bộ giải chạy bằng JavaScript, ăn thẳng ImageData nên rất nhanh (~0,1 giây). */
+function thuJsQR_(c) {
+  if (typeof jsQR === 'undefined') return '';
+  try {
+    var d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
+    var r = jsQR(d.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+    return (r && r.data) ? r.data : '';
+  } catch (e) { return ''; }
+}
+
+/** Bộ giải cài sẵn trong máy. Trên Android chính là ML Kit của Google — bộ Zalo dùng. */
+function thuMayGiaiSan(nguon) {
+  if (typeof BarcodeDetector === 'undefined' || typeof createImageBitmap === 'undefined') {
+    return Promise.resolve('');
+  }
+  return createImageBitmap(nguon)
+    .then(function (anh) {
+      var may = new BarcodeDetector({ formats: ['qr_code'] });
+      return may.detect(anh).then(function (ds) {
+        try { anh.close(); } catch (e) {}
+        return (ds && ds.length && ds[0].rawValue) ? ds[0].rawValue : '';
+      });
+    })
+    .catch(function () { return ''; });
+}
+
+/* ----------------------------------------------------------------------------
+ * ZXing bản WASM — CHÍNH bộ mã C++ mà Zalo dùng, biên dịch sang WebAssembly.
+ *
+ * Thay cho html5-qrcode (ZXing viết lại bằng JavaScript) từ 01/09/2026.
+ * Đo trên 4 ảnh thẻ THẬT Dương gửi ngày 29/08 — cả 4 ảnh Zalo đọc được:
+ *     bản JavaScript (html5-qrcode) : 0/4, mỗi lượt ~1,1 giây
+ *     bản WASM                      : 4/4, mỗi lượt ~40 mili giây
+ * Nhanh gấp ~25 lần nên không còn phải "để dành" nó cho một chặng riêng như bản 3.1:
+ * nay nó chạy ở MỌI lượt, ngay cạnh jsQR.
+ * -------------------------------------------------------------------------- */
+var ZX_BAN = '3.1.3';
+var zxSan = false, zxHong = false, zxCho = null;
+// Chặng 0 có THẬT SỰ chạy được bộ giải hay không — chưa tải kịp thì còn được thử lại một lần.
+var qrDaThuTep = false;
+
+/**
+ * Nạp bộ giải NGAY KHI MỞ TRANG, chạy nền, không chặn gì cả.
+ * Tệp .wasm nặng ~1,1 MB — nghe thì to, nhưng nó tải trong lúc người dùng còn đang
+ * chọn nhà máy và giơ máy chụp thẻ, nên tới lúc cần thì đã có sẵn. Bù lại đã bỏ
+ * html5-qrcode nặng 330 KB. Tải hỏng cũng không sao: jsQR và bộ giải sẵn của máy
+ * vẫn chạy, nút gõ tay 12 số luôn còn đó.
+ */
+function zxNap_() {
+  if (zxCho) return zxCho;
+  if (typeof ZXingWASM === 'undefined') { zxHong = true; return (zxCho = Promise.resolve(false)); }
+  try {
+    zxCho = ZXingWASM.prepareZXingModule({
+      // Ghim tệp .wasm về CÙNG MỘT nhà (unpkg) với jsQR. Mặc định thư viện lấy ở
+      // jsdelivr — thêm một nhà là thêm một chỗ hỏng, mà hỏng thì hỏng câm.
+      overrides: {
+        locateFile: function (t, p) {
+          return /\.wasm$/.test(t)
+            ? 'https://unpkg.com/zxing-wasm@' + ZX_BAN + '/dist/reader/' + t
+            : p + t;
+        }
+      },
+      fireImmediately: true
+    }).then(function () { zxSan = true; return true; },
+            function () { zxHong = true; return false; });
+  } catch (e) { zxHong = true; zxCho = Promise.resolve(false); }
+  return zxCho;
+}
+zxNap_();
+
+// tryHarder: chịu khó dò lâu hơn · tryRotate: thẻ cầm nghiêng · tryInvert: ảnh âm bản
+// · tryDownscale: tự thu nhỏ thử thêm vài cỡ (chính nó cứu ảnh chụp quá gần).
+var ZX_TUY = {
+  tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true,
+  formats: ['QRCode'], maxNumberOfSymbols: 1
+};
+
+function zxRa_(ds) { return (ds && ds.length && ds[0].text) ? ds[0].text : ''; }
+
+/**
+ * Giải THẲNG từ tệp ảnh gốc — không qua canvas, không thu nhỏ.
+ * Đây vừa là đường nhanh nhất (2/4 ảnh xong ngay ở đây, ~40–110ms), vừa là đường
+ * an toàn nhất cho iPhone: không đụng tới canvas thì không bao giờ chạm trần bộ nhớ
+ * canvas của Safari — đúng cái bẫy đã làm hỏng bản 3.0.
+ */
+function thuWasmFile_(nguon) {
+  return zxNap_().then(function (ok) {
+    if (!ok) return '';
+    qrDaThuTep = true;
+    try { return ZXingWASM.readBarcodes(nguon, ZX_TUY).then(zxRa_, function () { return ''; }); }
+    catch (e) { return ''; }
+  });
+}
+
+/** Giải một vùng đã cắt ra canvas. Chưa nạp xong thì bỏ qua, đừng bắt cả dây chuyền đứng chờ. */
+function thuWasmCanvas_(c) {
+  if (!zxSan) return Promise.resolve('');
+  var d;
+  try { d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height); }
+  catch (e) { return Promise.resolve(''); }
+  try { return ZXingWASM.readBarcodes(d, ZX_TUY).then(zxRa_, function () { return ''; }); }
+  catch (e) { return Promise.resolve(''); }
+}
+
+/** Nhường luồng cho trình duyệt vẽ lại, khỏi treo màn hình khi dò lâu. */
+function nhuong_() { return new Promise(function (ok) { setTimeout(ok, 0); }); }
+
+/**
+ * Nạp ảnh thành thứ vẽ được lên canvas.
+ * Ưu tiên createImageBitmap (nhanh, giải nén sẵn); Safari cũ không có hoặc lỗi thì
+ * LÙI VỀ thẻ <img> thường — trước đây chỗ này hỏng là hỏng câm, iPhone đời cũ chịu chết.
+ */
+function napAnh_(nguon) {
+  function quaImg() {
+    return new Promise(function (ok, hong) {
+      var u = URL.createObjectURL(nguon), im = new Image();
+      im.onload = function () {
+        ok({ ve: im, W: im.naturalWidth || im.width, H: im.naturalHeight || im.height,
+             dong: function () { try { URL.revokeObjectURL(u); } catch (e) {} } });
+      };
+      im.onerror = function () { try { URL.revokeObjectURL(u); } catch (e) {} hong(new Error('hỏng ảnh')); };
+      im.src = u;
+    });
+  }
+  if (typeof createImageBitmap === 'undefined') return quaImg();
+  return createImageBitmap(nguon).then(function (b) {
+    return { ve: b, W: b.width, H: b.height, dong: function () { try { b.close(); } catch (e) {} } };
+  }).catch(quaImg);
+}
+
+/** Một dòng chẩn đoán — để Dương chụp màn hình gửi lại khi máy nào đó vẫn không đọc được. */
+function qrMoiTruong_() {
+  var coLoc = false;
+  try {
+    var c = document.createElement('canvas'); c.width = c.height = 8;
+    var x = c.getContext('2d'); x.filter = 'blur(1px)';
+    coLoc = !!(x.filter && x.filter !== 'none');
+  } catch (e) {}
+  return 'ảnh:' + (typeof createImageBitmap !== 'undefined' ? 'bitmap' : 'img') +
+         ' · máy giải sẵn:' + (typeof BarcodeDetector !== 'undefined' ? 'có' : 'không') +
+         ' · jsQR:' + (typeof jsQR !== 'undefined' ? 'có' : 'KHÔNG') +
+         ' · ZXing-WASM:' + (zxSan ? 'sẵn sàng'
+              : typeof ZXingWASM === 'undefined' ? 'KHÔNG TẢI ĐƯỢC'
+              : zxHong ? 'HỎNG' : 'đang tải') +
+         ' · lọc canvas:' + (coLoc ? 'có' : 'không');
+}
+
+/**
+ * Chờ bộ giải WASM tối đa `han` mili giây rồi đi tiếp — KHÔNG đứng chờ vô hạn.
+ * Ở cổng nhà máy sóng có thể yếu, tệp .wasm 1,1 MB về chậm; bắt cộng tác viên nhìn
+ * màn hình đứng im là họ tắt trang. Chờ hụt cũng không mất gì: jsQR chạy ngay được,
+ * và khi WASM về tới nơi thì các lượt sau tự khắc dùng nó.
+ */
+function thuWasmFileHan_(nguon, han) {
+  if (typeof ZXingWASM === 'undefined' || zxHong) return Promise.resolve('');
+  if (zxSan) return thuWasmFile_(nguon);
+  return new Promise(function (ok) {
+    var da = false;
+    var h = setTimeout(function () { if (!da) { da = true; ok(''); } }, han);
+    zxNap_().then(function (s) {
+      if (da) return;
+      clearTimeout(h); da = true;
+      ok(s ? thuWasmFile_(nguon) : '');
+    }, function () { if (!da) { clearTimeout(h); da = true; ok(''); } });
+  });
+}
+
+/**
+ * Cửa chính: nhận File/Blob, trả về chuỗi trong mã QR (hoặc '' nếu chịu thua).
+ * baoBuoc(chuỗi) được gọi cách quãng để hiện tiến độ cho người dùng.
+ */
+function giaiMaTuNguon(nguon, baoBuoc) {
+  qrDaThuTep = false;
+  // CHẶNG 0 — đưa THẲNG tệp ảnh gốc cho ZXing-WASM.
+  // Không canvas, không thu nhỏ, không cắt vùng. Vừa nhanh nhất (~40–110ms), vừa là
+  // đường an toàn nhất cho iPhone: không đụng canvas thì không bao giờ chạm trần bộ nhớ
+  // canvas của Safari. Đo trên 4 ảnh thẻ thật: 2/4 xong ngay tại đây.
+  if (baoBuoc) baoBuoc('Đang đọc nguyên ảnh…');
+  return thuWasmFileHan_(nguon, 2500).then(function (t0) {
+    if (t0) return t0;
+    return napAnh_(nguon).then(function (A) {
+      var vm = vungTuMoc_(A);
+      var ke = keHoachLuoi_(A.W, A.H);
+      var tong = Math.min(vm.length, 10) * 3 + ke.length + 1;
+      var dem = 0, batDau = Date.now(), daThuTep = qrDaThuTep;
+
+      function conGio() { return Date.now() - batDau < QR_HAN_GIO_MS; }
+      function xong(t) { try { A.dong(); } catch (e) {} traKhung_(); return t; }
+      function tien(nhan) {
+        dem++;
+        // Chỉ vẽ lại tiến độ cách quãng: cập nhật từng lượt làm trình duyệt dựng lại
+        // bố cục liên tục, tự nó ngốn nhiều thời gian hơn cả việc giải mã.
+        if (baoBuoc && dem % 4 === 1) baoBuoc('Đang dò ' + nhan + ' (' + dem + '/' + tong + ')');
+      }
+      function nghi() { return dem % 15 === 0 ? nhuong_() : Promise.resolve(); }
+
+      /**
+       * Một lượt: jsQR (~10ms) → ZXing-WASM (~40ms) → bộ giải sẵn của máy (Android: ML Kit).
+       * Bản 3.1 phải để ZXing riêng ra một chặng cuối vì bản JavaScript tốn ~1,1 giây mỗi
+       * lượt, chạy khắp nơi thì không kịp. Bản WASM rẻ tới mức cho chạy ở MỌI lượt —
+       * và chính nó là bộ đọc được cả 4 thẻ khó.
+       */
+      function luot(v, che, tiep) {
+        tien(v.ten);
+        var c = veVung_(A, v, che);
+        var t = thuJsQR_(c);
+        if (t) return Promise.resolve(t);
+        return thuWasmCanvas_(c).then(function (t2) {
+          if (t2) return t2;
+          return thuMayGiaiSan(c).then(function (t3) {
+            return t3 || nghi().then(tiep);
+          });
+        });
+      }
+
+      // Chặng 1 — nguyên ảnh qua canvas, 2 chế độ. Cứu ca WASM chưa tải kịp,
+      // và ca ảnh cần đổi cách xám hoá (nền bảo an xanh lơ) mới đọc được.
+      function chang1(k) {
+        if (k >= 2 || k >= ke.length) return thuLaiTep();
+        return luot(ke[k].v, CHE_DO_QR[ke[k].m], function () { return chang1(k + 1); });
+      }
+      // Nếu lúc mở màn WASM chưa về kịp thì tới đây nó thường đã về — thử lại đường
+      // "thẳng từ tệp" đúng MỘT lần, vì đó là đường khoẻ nhất trong cả dây chuyền.
+      function thuLaiTep() {
+        if (daThuTep || !zxSan) return changA(0, 0);
+        daThuTep = true;
+        tien('nguyên tệp ảnh');
+        return thuWasmFile_(nguon).then(function (t) { return t || changA(0, 0); });
+      }
+      // Chặng A — vùng suy ra từ ô định vị (finder pattern), 3 chế độ rẻ nhất
+      function changA(m, k) {
+        if (m >= 3 || !conGio()) return changC(2);
+        if (k >= vm.length || k >= 10) return changA(m + 1, 0);   // 10 = cụm 1 (7 vùng) + 3 vùng của cụm 2
+        return luot(vm[k], CHE_DO_QR[m], function () { return changA(m, k + 1); });
+      }
+      // Chặng C — quét lưới ô vuông toàn ảnh, phòng khi dò mốc trượt.
+      // `ke` đã xếp sẵn rẻ trước đắt sau (hết chế độ 0 mới sang chế độ 1…) nên
+      // không phải cắt làm hai đoạn như bản 3.1 nữa.
+      function changC(k) {
+        if (k >= ke.length || !conGio()) return '';
+        return luot(ke[k].v, CHE_DO_QR[ke[k].m], function () { return changC(k + 1); });
+      }
+      return chang1(0).then(xong, function () { return xong(''); });
+    });
+  }).catch(function () { traKhung_(); return ''; });
+}
+
+
+// tự chèn dấu / cho ô ngày
+['ngay_sinh', 'ngay_lam_pv'].forEach(function (id) {
+  $(id).addEventListener('input', function () {
+    var s = this.value.replace(/\D/g, '').substring(0, 8);
+    this.value = s.length > 4 ? s.substring(0, 2) + '/' + s.substring(2, 4) + '/' + s.substring(4)
+               : s.length > 2 ? s.substring(0, 2) + '/' + s.substring(2) : s;
+  });
+});
+
+/**
+ * Báo NGAY khi vừa gõ xong ngày hẹn, không đợi tới lúc bấm Gửi.
+ * Người nhập đang cầm thẻ căn cước của người ta trước mặt; biết sai ngay lúc gõ thì sửa
+ * một giây, còn để tới lúc bấm Gửi mới báo thì phải cuộn ngược lên tìm.
+ */
+$('ngay_lam_pv').addEventListener('blur', function () {
+  var o = $('loi_form'), ngay = this.value.trim();
+  var tenNgay = loaiCT === 'chinh_thuc' ? 'Ngày phỏng vấn' : 'Ngày đi làm';
+  if (!ngay) return;
+  var cach = ngayCachHomNay(ngay);
+  if (cach === null || cach >= 0) {
+    // Chỉ dọn đúng câu báo của chính ô này, không xoá lỗi của ô khác
+    if (o.textContent.indexOf('đã qua') >= 0) { o.textContent = ''; o.classList.remove('hien'); }
+    return;
+  }
+  o.textContent = tenNgay + ' là ' + ngay + ' — ngày này đã qua. Chọn hôm nay hoặc ngày sắp tới.';
+  o.classList.add('hien');
+});
+
+$('so_cccd').addEventListener('blur', function () {
+  var c = this.value.replace(/\D/g, '');
+  if (c.length === 12 && maCT) traTinhTrang(c);
+});
+
+// ---------- Gửi ----------
+$('form').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var loi = '', cccd = $('so_cccd').value.replace(/\D/g, ''),
+      ten = $('ho_ten').value.trim().replace(/\s+/g, ' '),
+      ct = $('ma_ct').value, nn = $('nguoi_nhap').value.trim(),
+      sdt = $('sdt').value.replace(/\D/g, ''),
+      ngay = $('ngay_lam_pv').value.trim(),
+      tenNgay = loaiCT === 'chinh_thuc' ? 'Ngày phỏng vấn' : 'Ngày đi làm',
+      cach = ngayCachHomNay(ngay);
+  if (!ct) loi = 'Chưa chọn nhà máy';
+  else if (ten.length < 3 || ten.indexOf(' ') < 0) loi = 'Nhập đầy đủ họ và tên';
+  else if (cccd.length !== 12) loi = cccd.length ? 'Số CCCD đang có ' + cccd.length + ' chữ số, cần đúng 12' : 'Chưa nhập số CCCD';
+  // Số điện thoại là thứ người đón dùng để GỌI — sai một chữ số là mất công cả dây chuyền.
+  // Trước đây ô này không kiểm gì cả, đã lọt một số chỉ có 9 chữ số vào bảng.
+  else if (!sdtHopLe(sdt)) loi = loiSdt(sdt);
+  // BẮT BUỘC có ngày: không có ngày thì người này không nằm trong báo cáo của ngày nào cả,
+  // người đón sẽ không bao giờ biết mà chờ. Đây từng là lỗ hổng thật — nửa số dòng bỏ trống.
+  else if (!ngay) loi = 'Chưa nhập ' + tenNgay.toLowerCase();
+  else if (cach === null) loi = tenNgay + ' không hợp lệ — nhập dạng dd/mm/yyyy';
+  // CHẶN CỨNG ngày đã qua (bản 3.19). Trước đây chỉ hỏi một câu confirm và người ta bấm
+  // qua; hậu quả là người đó rơi vào ô "quá hạn" và hôm sau người đón không thấy đâu cả.
+  // Hôm nay (cach = 0) VẪN đăng ký được — đón ngay trong ngày là chuyện thường.
+  else if (cach < 0) loi = tenNgay + ' là ' + ngay + ' — ngày này đã qua. Chọn hôm nay hoặc ngày sắp tới.';
+  else if (nn.length < 2) loi = 'Nhập tên người tuyển dụng (để nhóm biết ai vừa đăng ký)';
+  else if (!$('dong_y').checked) loi = 'Cần tích ô đồng ý mới đăng ký được';
+  var o = $('loi_form');
+  o.textContent = loi; o.classList.toggle('hien', !!loi);
+  if (loi) { o.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+  // Ngày cách quá xa gần như luôn là GÕ NHẦM THÁNG hoặc NĂM. Đã gặp thật: nhập 17/08 mà
+  // ghi ngày đi làm 18/09 — người đó biến mất khỏi báo cáo suốt một tháng.
+  // Hỏi lại một câu, không chặn cứng, vì vẫn có ca hẹn xa thật.
+  // (Ngày ĐÃ QUA thì chặn cứng ở phần soát lỗi bên trên, không hỏi nữa.)
+  if (cach > 45) {
+    if (!confirm(tenNgay + ' là ' + ngay + ', tức còn ' + cach + ' ngày nữa.'
+        + '\n\nCó đúng không? Kiểm lại tháng và năm xem có gõ nhầm.')) {
+      $('ngay_lam_pv').focus(); return;
+    }
+  }
+
+  // Ca bắt buộc với thời vụ — chặn ở trang cho người ta biết ngay, máy chủ chặn lần nữa
+  // (soatCa_) vì ai mở F12 lên cũng bỏ qua được lớp này.
+  if (loaiCT !== 'chinh_thuc' && !caDaChon) {
+    alert('Chưa chọn ca làm việc.\n\nMảng thời vụ phải chọn ca ngày hay ca đêm — người đón cần biết để xếp xe.');
+    $('hang_ca').scrollIntoView({ block: 'center' });
+    return;
+  }
+
+  var nut = $('nut_dk');
+  nut.disabled = true; nut.textContent = 'Đang gửi…';
+  var gt = document.querySelector('input[name=gt]:checked');
+  var d = {
+    token: TOKEN_API, hanh_dong: 'dang_ky', ma_ct: ct,
+    so_cccd: cccd, ho_ten: ten,
+    ngay_sinh: $('ngay_sinh').value.trim(),
+    // MỘT ô trên màn hình, nhưng vẫn ghi vào ĐÚNG HAI CỘT riêng trong bảng —
+    // vì báo cáo đếm thời vụ theo ngày đi làm, chính thức theo ngày phỏng vấn.
+    ngay_phong_van: loaiCT === 'chinh_thuc' ? ngay : '',
+    ngay_di_lam: loaiCT === 'chinh_thuc' ? '' : ngay,
+    ca_lam: loaiCT === 'chinh_thuc' ? '' : caDaChon,
+    gioi_tinh: gt ? gt.value : '',
+    sdt: sdt,
+    noi_thuong_tru: $('noi_thuong_tru').value.trim(),
+    ghi_chu: $('ghi_chu').value.trim(),
+    nguoi_nhap: nn,
+    ngay_cap: ngayCap, cmnd_cu: cmndCu,
+    nguon_nhap: nguonNhap, qr_tho: qrTho, dong_y: true
+  };
+  try { localStorage.setItem('nguoi_nhap', nn); } catch (e) {}
+
+  guiDangKy(d, ten, nut);
+});
+
+/**
+ * Gửi hồ sơ. Nếu máy chủ trả CAN_XAC_NHAN (người này vừa đăng ký ở công ty khác)
+ * thì hỏi người nhập, đồng ý mới gửi lại kèm cờ xác nhận — lúc đó vẫn đăng ký
+ * và ghi rõ là trùng.
+ */
+function guiDangKy(d, ten, nut) {
+  goiAPI(d).then(function (kq) {
+    if (kq.ok && kq.ma === 'CAN_XAC_NHAN') {
+      nut.disabled = false; nut.textContent = 'Xác nhận nộp';
+      var ds = (kq.danh_sach_trung || []).map(function (x) {
+        return '• ' + x.ten_cong_ty + ' (' + x.loai + ')\n  do "' + x.nguoi_nhap +
+               '" đăng ký ngày ' + x.ngay_dk;
+      }).join('\n');
+      var hoi = 'NGƯỜI NÀY VỪA ĐĂNG KÝ Ở CÔNG TY KHÁC\n\n' + ds +
+                '\n\nBạn vẫn muốn đăng ký cho "' + (kq.ten_cong_ty || tenCT) + '"?\n' +
+                'Nếu đồng ý, hệ thống vẫn đăng ký và ghi rõ là trùng.';
+      if (!confirm(hoi)) {
+        baoDai('vang', '<b>Đã huỷ.</b> Người này vừa đăng ký ở: ' + thoat(kq.trung_voi));
+        hien('form'); return;
+      }
+      d.xac_nhan_trung = true;
+      nut.disabled = true; nut.textContent = 'Đang gửi…';
+      guiDangKy(d, ten, nut);
+      return;
+    }
+    if (kq.ok && (kq.ma === 'THANH_CONG' || kq.ma === 'DANG_KY_LAI' || kq.ma === 'TRUNG_KHAC_CT')) {
+      luuDanhSach({ ma_ld: kq.ma_ld, ho_ten: ten, cccd_che: kq.cccd_che,
+                    sdt: d.sdt, ten_cong_ty: kq.ten_cong_ty || tenCT });
+    }
+    // Máy chủ đã trả lời rành mạch (nhận hoặc từ chối) → phiếu không còn treo
+    boPhieu();
+    veTinhTrang(kq);
+    goiAPI({ token: TOKEN_API, hanh_dong: 'gui_tin' }).catch(function () {});
+  }).catch(function () {
+    // Mất mạng giữa chừng: CẤT PHIẾU LẠI trong máy để không mất công gõ,
+    // lần mở trang sau sẽ hiện nút gửi lại. Máy chủ vẫn soát trùng như thường
+    // nên gửi lại không bao giờ sinh dòng kép.
+    catPhieu(d);
+    veTinhTrang({ ok: false, ma: 'MAT_MANG',
+      loi: 'Không gửi được — phiếu đã được CẤT LẠI TRONG MÁY. Có mạng thì mở lại trang này, hệ thống sẽ nhắc gửi lại.' });
+    nut.disabled = false; nut.textContent = 'Xác nhận nộp';
+  });
+}
+
+// ---------- Lưới an toàn: phiếu chưa gửi được ----------
+/**
+ * ĐỔI nhà máy cho phiếu cũ. Ghi đè đúng phiếu đó, KHÔNG tạo phiếu mới.
+ * Mọi điều kiện (đúng người, còn hạn, chưa đón, cùng mảng) đều do MÁY CHỦ xét lại —
+ * ở đây chỉ hỏi lại cho chắc rồi gửi đi.
+ */
+$('nut_sua').addEventListener('click', function () {
+  if (!phieuSua) return;
+  var nn = ($('nguoi_nhap').value || '').trim();
+  if (!nn) { alert('Điền tên người tuyển dụng trước đã.'); $('nguoi_nhap').focus(); return; }
+  var hoi = phieuSua.mo_lai
+    ? ('MỞ LẠI PHIẾU ĐÃ HUỶ\n\n' + (phieuSua.ho_ten || '') + ' — ' + phieuSua.ma_ld +
+       '\n\nPhiếu này đã huỷ vì người đó báo KHÔNG ĐI.\nMở lại sẽ đưa họ về danh sách chờ đón tại: ' +
+       (tenCT || 'nhà máy này') + '\n\nĐồng ý?')
+    : ('ĐỔI NHÀ MÁY CHO PHIẾU CŨ\n\n' + (phieuSua.ho_ten || '') + ' — ' + phieuSua.ma_ld +
+       '\n\nTừ:  ' + phieuSua.cong_ty_cu + '\nSang: ' + (tenCT || 'nhà máy này') +
+       '\n\nPhiếu cũ bị GHI ĐÈ, không tạo phiếu mới. Đồng ý?');
+  if (!confirm(hoi)) return;
+
+  var n = this; n.disabled = true;
+  n.textContent = phieuSua.mo_lai ? 'Đang mở lại…' : 'Đang đổi…';
+  goiAPI({ token: TOKEN_API, hanh_dong: 'sua_dang_ky', ma_ld: phieuSua.ma_ld, ma_ct: maCT,
+           nguoi_nhap: nn,
+           ca_lam: loaiCT === 'chinh_thuc' ? '' : caDaChon,
+           ngay_di_lam: loaiCT === 'chinh_thuc' ? '' : ($('ngay_lam_pv').value || '').trim(),
+           ngay_phong_van: loaiCT === 'chinh_thuc' ? ($('ngay_lam_pv').value || '').trim() : '',
+           ghi_chu: ($('ghi_chu').value || '').trim() })
+    .then(function (kq) {
+      if (kq && kq.ok) {
+        phieuSua = null;
+        $('nut_sua').classList.add('an');
+        goiAPI({ token: TOKEN_API, hanh_dong: 'gui_tin' }).catch(function () {});
+      }
+      veTinhTrang(kq);
+    })
+    .catch(function () {
+      alert('Không nối được máy chủ. Phiếu CHƯA đổi — thử lại khi có mạng.');
+    })
+    .then(function () { n.disabled = false; n.textContent = 'ĐỔI phiếu sang nhà máy này'; });
+});
+
+function catPhieu(d) {
+  try { localStorage.setItem('phieu_cho', JSON.stringify(d)); } catch (e) {}
+}
+function boPhieu() {
+  try { localStorage.removeItem('phieu_cho'); } catch (e) {}
+}
+function xemPhieuCho() {
+  var d = null;
+  try { d = JSON.parse(localStorage.getItem('phieu_cho') || 'null'); } catch (e) {}
+  if (!d || !d.so_cccd) return;
+  var o = $('canh_bao');
+  o.innerHTML = '<b>Còn 1 phiếu chưa gửi được:</b> ' + thoat(d.ho_ten) + ' (***' + d.so_cccd.slice(-4) + ')' +
+    '<br><button type="button" id="nut_guilai" style="margin-top:8px;padding:8px 14px;border:0;border-radius:7px;' +
+    'background:var(--xanh);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">Gửi lại ngay</button>' +
+    '<button type="button" id="nut_bophieu" style="margin-top:8px;margin-left:8px;padding:8px 14px;border:0;' +
+    'border-radius:7px;background:#e3e7eb;font-family:inherit;font-size:14px;cursor:pointer">Bỏ phiếu này</button>';
+  o.className = 'canhbao hien vang';
+  hien('form');
+  $('nut_guilai').addEventListener('click', function () {
+    var nut = $('nut_dk');
+    nut.disabled = true; nut.textContent = 'Đang gửi lại…';
+    o.className = 'canhbao';
+    guiDangKy(d, d.ho_ten, nut);
+  });
+  $('nut_bophieu').addEventListener('click', function () { boPhieu(); o.className = 'canhbao'; });
+}
+
+function veTinhTrang(kq) {
+  var loai, dau, tieu, mo = '', ma = kq.ma_ld || '', them = '';
+  if (kq.ok && kq.ma === 'THANH_CONG')       { loai = 'tot';  dau = '✓'; tieu = 'Đăng ký thành công'; mo = kq.ho_ten + ' — ' + kq.cccd_che; }
+  else if (kq.ok && kq.ma === 'DANG_KY_LAI') { loai = 'tot';  dau = '✓'; tieu = 'Đã đăng ký lại';     mo = kq.ho_ten + ' — lần trước ' + kq.ma_lan_truoc + ' đã kết thúc'; }
+  else if (kq.ok && kq.ma === 'TRUNG_KHAC_CT'){ loai = 'tot'; dau = '✓'; tieu = 'Đã đăng ký (có trùng)';
+      mo = kq.ho_ten;
+      them = '<p style="color:var(--canh)">(!) Cũng đang đăng ký tại: ' + thoat(kq.trung_voi) + '</p>'; }
+  else if (kq.ok && kq.ma === 'DA_SUA')      { loai = 'tot';  dau = '✓'; tieu = 'Đã đổi nhà máy';
+      mo = kq.ho_ten + ' — ' + kq.cccd_che;
+      them = '<p>Từ <b>' + thoat(kq.cong_ty_cu || '?') + '</b> sang <b>' +
+             thoat(kq.ten_cong_ty || '?') + '</b>' +
+             (kq.ngay_di_lam ? ', đi làm ' + thoat(kq.ngay_di_lam) : '') +
+             '</p><p style="color:var(--mo);font-size:13.5px">Phiếu cũ đã được ghi đè, ' +
+             'không tạo phiếu mới.</p>'; }
+  else if (kq.ok && kq.ma === 'TRUNG')       { loai = 'canh'; dau = '!'; tieu = 'Trùng — chưa đăng ký được';
+      mo = kq.ho_ten + (kq.con_khoa_ngay ? ' — còn ' + kq.con_khoa_ngay + ' ngày nữa mới đăng ký lại được' : '');
+      them = '<p><b>Đã được "' + thoat(kq.nguoi_nhap_cu || 'không rõ') + '"</b> đăng ký tại <b>' +
+             thoat(kq.ten_cong_ty_cu || '?') + '</b>' + (kq.ngay_dk ? ' ngày ' + thoat(kq.ngay_dk) : '') + '</p>'; }
+  else { loai = 'xau'; dau = '×'; tieu = 'Chưa đăng ký được'; mo = kq.loi || 'Có lỗi xảy ra'; ma = ''; }
+
+  if (kq.ten_cong_ty && kq.ma !== 'TRUNG' && kq.ma !== 'TRUNG_KHAC_CT' && kq.ma !== 'DA_SUA') {
+    them += '<p>' + thoat(kq.ten_cong_ty) + '</p>';
+  }
+  if (kq.canh_bao_cheo) them += '<p style="color:var(--canh)">(!) ' + thoat(kq.canh_bao_cheo) + '</p>';
+
+  $('man_tt').className = 'tt ' + loai;
+  $('man_tt').innerHTML =
+    '<div class="vong">' + dau + '</div><h2>' + tieu + '</h2>' +
+    '<p>' + thoat(mo) + '</p>' + them +
+    (ma ? '<div class="ma">' + thoat(ma) + '</div>' : '') +
+    '<button type="button" class="nut" onclick="location.reload()">Đăng ký người tiếp theo</button>';
+  hien('man_tt');
+}
+
+// ---------- Danh sách đã nhập hôm nay (lưu trong máy, KHÔNG lộ dữ liệu người khác) ----------
+function khoaNgay() { return 'ds_' + new Date().toISOString().substring(0, 10); }
+
+function luuDanhSach(m) {
+  try {
+    var ds = JSON.parse(localStorage.getItem(khoaNgay()) || '[]');
+    m.gio = new Date().toTimeString().substring(0, 5);
+    ds.unshift(m);
+    localStorage.setItem(khoaNgay(), JSON.stringify(ds.slice(0, 200)));
+  } catch (e) {}
+}
+
+$('nut_ds').addEventListener('click', function () {
+  var ds = [];
+  try { ds = JSON.parse(localStorage.getItem(khoaNgay()) || '[]'); } catch (e) {}
+  $('ds_tom').textContent = ds.length ? 'Bạn đã đăng ký ' + ds.length + ' người trong hôm nay'
+                                      : 'Chưa đăng ký ai trong hôm nay';
+  $('ds_noi').innerHTML = ds.length
+    ? ds.map(function (m) {
+        // Phiếu lưu TRƯỚC bản 3.21.1 không có số điện thoại — bỏ qua, đừng để lòi chữ
+        // "undefined" ra màn hình.
+        var sdt = (m.sdt || '').replace(/\D/g, '');
+        var phu = [thoat(m.cccd_che || ''), thoat(m.ma_ld)].filter(function (x) { return x; }).join(' · ');
+        return '<div class="ds-hang">' +
+               '<div class="d1"><b>' + thoat(m.ho_ten) + '</b>' +
+                 '<span class="gio">' + thoat(m.gio) + '</span></div>' +
+               '<div class="d2">' + phu +
+                 (sdt ? ' · <a href="tel:' + thoat(sdt) + '">' + thoat(sdt) + '</a>' : '') +
+               '</div></div>';
+      }).join('')
+    : '<div class="trong">Danh sách này chỉ hiện những người <b>bạn</b> vừa đăng ký trên máy này hôm nay.<br>' +
+      'Danh sách đầy đủ của cả đội xem trong nhóm Zalo hoặc Google Sheet.</div>';
+  hien('man_ds');
+});
+$('nut_dong_ds').addEventListener('click', function () { hien('form'); });
+</script>
+</body>
+</html>

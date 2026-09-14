@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="robots" content="noindex,nofollow">
+<title>Phân công đón</title>
+<!--
+  TRANG PHÂN CÔNG ĐÓN — bản 3.5
+
+  BA CHỨC VỤ (khai ở cột `vai_tro` của tab NGUOI_DON, CHỈ quản trị khai được):
+    quan_tri     — thấy MỌI nhóm, MỌI công ty, MỌI nhân viên
+    truong_nhom  — thấy đúng NHÓM của mình: chỉ chọn được công ty và nhân viên cùng nhóm
+    (trống)      — nhân viên đón, KHÔNG vào được trang này
+
+  PHÂN CÔNG LÀ THƯỜNG TRỰC (bản 3.15): chốt MỘT LẦN rồi thôi. Bảng đã chốt có hiệu lực
+  mọi ngày cho tới khi chính trưởng nhóm sửa lại — không phải vào bấm lại mỗi sáng.
+  Máy chủ tự gửi bảng đó vào nhóm mỗi ngày đúng giờ khai ở ô `gio_phan_cong`.
+
+  Trưởng nhóm chỉ mở trang này KHI CÓ THAY ĐỔI. Bấm Gửi thì máy chủ làm hai việc:
+    1. Sửa quyền xem danh sách lao động — người được tích mở trang danh sách là thấy ngay,
+       KHÔNG phải đăng nhập lại, và quyền đó KHÔNG hết hạn; người bị bỏ ra thì quyền còn
+       sống thêm ÂN HẠN (mặc định hết ngày mai) để họ báo nốt việc đang làm dở.
+    2. Bắn thêm MỘT tin vào nhóm trưởng nhóm ngay lúc đó, để cả nhóm biết bảng vừa đổi.
+
+  BẢO MẬT: đăng nhập bằng số CCCD + mật khẩu, y hệt trang danh sách.
+  Trang này KHÔNG cấp được chức vụ cho ai, và KHÔNG đụng được sang nhóm khác.
+  Mọi luật phạm vi đều kiểm LẠI ở máy chủ — lọc ở trang chỉ để cho gọn mắt, ai mở F12
+  sửa mã trang là gửi lên được bất cứ mã công ty và khoá người nào.
+
+  SỐ CCCD KHÔNG BAO GIỜ VỀ TỚI ĐÂY. Máy chủ gửi xuống "khoá" 16 ký tự băm từ CCCD, trang
+  chỉ hiện 4 số cuối để phân biệt người trùng tên. Tích ai thì gửi lên khoá của người đó.
+-->
+<style>
+  :root{
+    --nen:#f4f6f8; --the:#ffffff; --vien:#e6e9ed; --chu:#1f2933; --mo:#7b8794;
+    --xanh:#1f9d55; --xanh-nhat:#f2f9f4; --do:#c0392b; --do-nhat:#fdecea;
+    --vang-nhat:#fff8e6; --vang-vien:#f0dda0; --xam-nut:#eef1f4;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--nen);color:var(--chu);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  .boc{max-width:560px;margin:0 auto;padding-bottom:26px}
+  .an{display:none !important}
+
+  .dinh{text-align:center;padding:20px 16px 8px}
+  .dinh b{font-size:17.5px}
+  .dinh .phu{font-size:13px;color:var(--mo);margin-top:3px}
+
+  .nut{display:block;width:calc(100% - 28px);margin:14px;padding:15px;border:0;border-radius:12px;
+    background:var(--xanh);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  .nut.phu{background:var(--xam-nut);color:#3c4753}
+  .nut:disabled{opacity:.55}
+
+  .o{padding:0 16px}
+  .o input{width:100%;padding:13px 12px;font-size:16px;border:1px solid #d9dde2;
+    border-radius:10px;margin-top:6px;background:#fff}
+  .nhan{font-size:13.5px;color:var(--mo);margin-top:14px}
+  .loi{margin:12px 16px 0;padding:10px 12px;border-radius:9px;background:var(--do-nhat);
+    color:#8a1c13;font-size:13.5px}
+  .mach{padding:4px 16px 18px;font-size:12.5px;color:var(--mo);line-height:1.55}
+
+  .doi-ngay{display:flex;gap:8px;padding:0 14px}
+  .doi-ngay button{flex:1;padding:11px;border:1px solid var(--vien);background:#fff;border-radius:10px;
+    font-size:14.5px;font-weight:600;color:#3c4753;cursor:pointer}
+  .doi-ngay button.dang{background:var(--chu);border-color:var(--chu);color:#fff}
+  .tim{display:block;width:calc(100% - 28px);margin:10px 14px 0;padding:11px 12px;font-size:15px;
+    border:1px solid #d9dde2;border-radius:10px;background:#fff}
+
+  .the-ct{display:flex;align-items:center;gap:10px;margin:9px 14px 0;padding:13px 13px;
+    border-radius:12px;background:var(--the);border:1px solid var(--vien);cursor:pointer;width:calc(100% - 28px);
+    text-align:left;font-family:inherit;font-size:16px;color:var(--chu)}
+  .the-ct .ten{flex:1;min-width:0}
+  .the-ct .ten b{display:block;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .the-ct .ten span{display:block;font-size:12.5px;color:var(--mo);margin-top:2px}
+  .the-ct .so{flex:none;min-width:30px;height:30px;padding:0 9px;border-radius:15px;background:var(--xam-nut);
+    color:#3c4753;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .the-ct .so.co{background:var(--xanh);color:#fff}
+  .the-ct .mui{flex:none;color:#c3cad2;font-size:20px;line-height:1}
+
+  .ng{display:flex;align-items:center;gap:11px;margin:8px 14px 0;padding:12px 13px;border-radius:12px;
+    background:var(--the);border:1px solid var(--vien);cursor:pointer;width:calc(100% - 28px);
+    text-align:left;font-family:inherit;color:var(--chu)}
+  .ng.chon{background:var(--xanh-nhat);border-color:#bfe0c9}
+  .ng.khoa{background:var(--vang-nhat);border-color:var(--vang-vien);cursor:default}
+  .ng .tick{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid #cfd6dd;background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:700}
+  .ng.chon .tick{background:var(--xanh);border-color:var(--xanh)}
+  .ng.khoa .tick{background:#e5c97a;border-color:#e5c97a;font-size:13px}
+  .ng .ten{flex:1;min-width:0}
+  .ng .ten b{display:block;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ng .ten span{display:block;font-size:12.5px;color:var(--mo);margin-top:2px}
+  /* Phải viết đủ ".ng .ten b .canh" chứ không phải ".canh": luật ".ng .ten span" ở trên
+     có độ ưu tiên cao hơn nên sẽ biến nhãn thành display:block, kéo giãn hết chiều ngang
+     và đẩy xuống dòng riêng. */
+  .ng .ten b .canh{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:20px;
+    background:var(--do-nhat);color:#8a1c13;margin-left:5px;font-weight:600;vertical-align:1px}
+
+  .trong{margin:16px 14px;padding:16px;background:var(--the);border:1px solid var(--vien);
+    border-radius:12px;color:var(--mo);font-size:14px;text-align:center}
+  .nhac{margin:12px 14px 0;padding:11px 13px;border-radius:10px;background:var(--vang-nhat);
+    border:1px solid var(--vang-vien);color:#6b4e00;font-size:13px;line-height:1.55}
+
+  .thanh{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--vien);padding:10px 14px;
+    box-shadow:0 -3px 12px rgba(0,0,0,.06)}
+  .thanh .tt{font-size:13.5px;color:#3c4753}
+  .thanh button{width:100%;margin-top:8px;padding:13px;border:0;border-radius:10px;font-size:15px;
+    font-weight:700;cursor:pointer;background:var(--xanh);color:#fff}
+  .thanh button.phu{background:var(--xam-nut);color:#3c4753}
+
+  .xong{margin:14px;padding:15px;border-radius:12px;background:var(--xanh-nhat);
+    border:1px solid #bfe0c9;font-size:14.5px;line-height:1.6}
+  .xong.xau{background:var(--do-nhat);border-color:#f0b3ae}
+  .xem-tin{margin:0 14px;padding:12px 13px;border-radius:10px;background:#fff;border:1px solid var(--vien);
+    font:12.5px/1.65 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;color:#3c4753}
+</style>
+</head>
+<body>
+<div class="boc">
+
+<!-- ===== ĐĂNG NHẬP ===== -->
+<div id="man_dn">
+  <div class="dinh">
+    <b>PHÂN CÔNG ĐÓN</b>
+    <div class="phu">Chốt ai phụ trách nhà máy nào — dùng mãi tới khi sửa lại</div>
+  </div>
+  <div class="o">
+    <div class="nhan">Số căn cước của bạn (12 số)</div>
+    <input id="dn_cccd" inputmode="numeric" maxlength="12" autocomplete="username" placeholder="Ví dụ 024303008090">
+    <div class="nhan">Mật khẩu</div>
+    <input id="dn_mk" type="password" autocomplete="current-password" placeholder="Mật khẩu được cấp">
+  </div>
+  <div class="loi an" id="dn_loi"></div>
+  <button type="button" class="nut" id="nut_dn">Đăng nhập</button>
+  <div class="mach">
+    Trang này chỉ dành cho <b>trưởng nhóm</b> và <b>quản trị</b>. Dùng đúng số căn cước và
+    mật khẩu như trang danh sách gọi — không phải mật khẩu riêng.<br><br>
+    Trưởng nhóm chỉ phân công được <b>công ty và nhân viên trong nhóm mình</b>.<br><br>
+    Xem danh sách để gọi thì mở <a href="danhsach.html">tại đây</a>.
+    Quét thẻ để đón thì mở <a href="doncong.html">tại đây</a>.
+  </div>
+</div>
+
+<!-- ===== DANH SÁCH CÔNG TY ===== -->
+<div id="man_ct" class="an">
+  <div class="dinh">
+    <b>PHÂN CÔNG ĐÓN</b>
+    <div class="phu" id="ct_tom">—</div>
+  </div>
+  <div class="doi-ngay">
+    <button type="button" id="ng_mai">Ngày mai</button>
+    <button type="button" id="ng_nay">Hôm nay</button>
+  </div>
+  <input id="ct_tim" class="tim an" placeholder="Gõ tên nhà máy để lọc nhanh — không cần dấu" autocomplete="off">
+  <div id="ct_noi"></div>
+  <div class="thanh an" id="ct_thanh">
+    <div class="tt" id="ct_tt">—</div>
+    <button type="button" id="nut_chot">Chốt &amp; gửi thông báo</button>
+  </div>
+  <button type="button" class="nut phu" id="nut_thoat">Đăng xuất</button>
+</div>
+
+<!-- ===== TÍCH NGƯỜI CHO MỘT CÔNG TY ===== -->
+<div id="man_ng" class="an">
+  <div class="dinh">
+    <b id="ng_ten">—</b>
+    <div class="phu" id="ng_tom">—</div>
+  </div>
+  <input id="ng_tim" class="tim" placeholder="Gõ tên để lọc nhanh — không cần dấu" autocomplete="off">
+  <div id="ng_noi"></div>
+  <div class="thanh">
+    <div class="tt" id="ng_tt">—</div>
+    <button type="button" class="phu" id="nut_ve">Xong, quay lại danh sách công ty</button>
+  </div>
+</div>
+
+<!-- ===== KẾT QUẢ ===== -->
+<div id="man_xong" class="an">
+  <div class="dinh">
+    <b>ĐÃ CHỐT</b>
+    <div class="phu" id="xong_phu">—</div>
+  </div>
+  <div id="xong_noi"></div>
+  <button type="button" class="nut phu" id="nut_lai">Quay lại bảng phân công</button>
+</div>
+
+</div>
+
+<script>
+// ====== CẤU HÌNH ======
+var URL_API   = 'https://script.google.com/macros/s/AKfycby1EldZql-1j9H3vaoZdK2e7CfEHZAyyHW-SiTkY4rFWUrb-jHODY68x-OWGVAFlKzU/exec';
+var TOKEN_API = 'd905baa65db6457e830d8f40';
+// ======================
+
+var $ = function (id) { return document.getElementById(id); };
+
+// Dùng CHUNG khoá phiên với trang danh sách: trưởng nhóm đăng nhập một lần là mở được
+// cả hai trang. Đổi khoá riêng chỉ tổ bắt họ gõ mật khẩu hai lần cho cùng một tài khoản.
+var KHOA_PHIEN = 'phien_ds_v3';
+
+function layPhien() { try { return localStorage.getItem(KHOA_PHIEN) || ''; } catch (e) { return ''; } }
+function datPhien(p) {
+  try { p ? localStorage.setItem(KHOA_PHIEN, p) : localStorage.removeItem(KHOA_PHIEN); } catch (e) {}
+}
+
+/** Mọi lượt gọi tự kèm vé, và tự đá về màn đăng nhập khi vé hết hạn hoặc bị thu hồi. */
+function goiAPI(body) {
+  var b = body || {};
+  if (!b.phien) b.phien = layPhien();
+  return fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                          body: JSON.stringify(b) })
+    .then(function (r) { return r.json(); })
+    .then(function (kq) {
+      if (kq && kq.ma === 'HET_PHIEN') { datPhien(''); veManDangNhap('Phiên đăng nhập đã hết. Xin đăng nhập lại.'); }
+      return kq;
+    });
+}
+
+function thoat(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function hien(el) {
+  ['man_dn', 'man_ct', 'man_ng', 'man_xong'].forEach(function (i) { $(i).classList.add('an'); });
+  $(el).classList.remove('an');
+  window.scrollTo(0, 0);
+}
+function ngayCong(n) {
+  var d = new Date(); d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+/** Bỏ dấu để lọc: gõ "uyen" ra "Uyên". Khớp theo ĐẦU TỪ, không khớp giữa chuỗi —
+    khớp giữa chuỗi thì gõ "uyen" ra cả họ "Nguyễn". */
+function khongDau(s) {
+  // Dải dấu thanh và chữ đ viết bằng MÃ \uXXXX chứ không dán ký tự thật vào regex:
+  // ký tự tổ hợp dán thẳng rất dễ bị một lần lưu khác bảng mã làm hỏng lặng lẽ — lúc đó
+  // ô lọc vẫn chạy nhưng gõ không dấu không ra ai, mà không báo lỗi gì cả.
+  if (!String.prototype.normalize) return String(s || '').toLowerCase();
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0111/g, 'd').replace(/\u0110/g, 'D').toLowerCase();
+}
+function khop(ten, cum) {
+  if (!cum) return true;
+  var tu = khongDau(ten).split(/\s+/);
+  return khongDau(cum).split(/\s+/).filter(String).every(function (c) {
+    return tu.some(function (t) { return t.indexOf(c) === 0; });
+  });
+}
+
+// ============================================================
+// ĐĂNG NHẬP
+// ============================================================
+var taiKhoan = null;
+
+function veManDangNhap(loi) {
+  taiKhoan = null;
+  if (loi) { $('dn_loi').textContent = loi; $('dn_loi').classList.remove('an'); }
+  else { $('dn_loi').classList.add('an'); }
+  $('dn_mk').value = '';
+  hien('man_dn');
+}
+
+function vaoTrong(kq) {
+  // Chặn ở trang chỉ để đỡ mất công người ta bấm vào rồi mới bị từ chối. Chốt chặn thật
+  // nằm ở MÁY CHỦ: pc_bang và pc_luu đều tự kiểm vai trò, sửa mã trang này không lách được.
+  if (!kq.phan_cong_duoc) {
+    datPhien('');
+    // Nói thẳng ô vai_tro đang ghi gì. Trước đây chỉ báo "bạn là nhân viên đón", trong khi
+    // người ta VỪA điền chức vụ xong — nghe như hệ thống hỏng, không ai biết đi sửa ở đâu.
+    veManDangNhap(kq.vai_tro_go_nham
+      ? 'Ô "vai_tro" của bạn trong bảng tính đang ghi "' + kq.vai_tro_go_nham + '", '
+        + 'hệ thống không hiểu là chức vụ nào nên vẫn xếp bạn là nhân viên đón. '
+        + 'Ô đó chỉ nhận đúng hai giá trị: truong_nhom hoặc quan_tri. Báo quản trị sửa lại.'
+      : 'Tài khoản này là ' + (kq.ten_chuc_vu || 'nhân viên đón')
+        + ' nên không mở được trang phân công — chỉ trưởng nhóm và quản trị mới vào được. '
+        + 'Nếu bạn cần được phân công, báo quản trị điền "truong_nhom" vào ô vai_tro của bạn. '
+        + 'Còn nếu bạn chỉ cần xem danh sách để gọi thì mở trang danh sách.');
+    return;
+  }
+  taiKhoan = { ten_nguoi: kq.ten_nguoi || '', chuc_vu: kq.chuc_vu || '',
+               ten_chuc_vu: kq.ten_chuc_vu || '', ds_nhom: kq.ds_nhom || [],
+               la_quan_tri: !!kq.la_quan_tri };
+  moNgay(ngayCong(1));            // mặc định NGÀY MAI — phân công là phân công cho hôm sau
+}
+
+$('nut_dn').addEventListener('click', function () {
+  var cccd = ($('dn_cccd').value || '').replace(/\D/g, '');
+  var mk = $('dn_mk').value || '';
+  if (cccd.length !== 12) { baoLoi('Số căn cước phải đủ 12 chữ số.'); return; }
+  if (!mk) { baoLoi('Chưa nhập mật khẩu.'); return; }
+  var n = this; n.disabled = true; n.textContent = 'Đang kiểm tra…';
+  $('dn_loi').classList.add('an');
+  goiAPI({ token: TOKEN_API, hanh_dong: 'dang_nhap', so_cccd: cccd, mat_khau: mk, phien: '-' })
+    .then(function (kq) {
+      if (kq && kq.ok) { datPhien(kq.phien); vaoTrong(kq); return; }
+      baoLoi((kq && kq.loi) || 'Không đăng nhập được.');
+    })
+    .catch(function () { baoLoi('Không nối được máy chủ. Kiểm tra mạng rồi thử lại.'); })
+    .then(function () { n.disabled = false; n.textContent = 'Đăng nhập'; });
+});
+function baoLoi(t) { $('dn_loi').textContent = t; $('dn_loi').classList.remove('an'); }
+$('dn_mk').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('nut_dn').click(); });
+
+$('nut_thoat').addEventListener('click', function () {
+  if (!confirm('Đăng xuất khỏi máy này?')) return;
+  datPhien('');
+  veManDangNhap('');
+});
+
+// Mở trang: còn vé thì vào thẳng, không bắt gõ lại mật khẩu mỗi chiều.
+(function khoiDong() {
+  if (!layPhien()) { veManDangNhap(''); return; }
+  goiAPI({ token: TOKEN_API, hanh_dong: 'cong_ty_cua_toi' })
+    .then(function (kq) { if (kq && kq.ok) vaoTrong(kq); else veManDangNhap(''); })
+    .catch(function () { veManDangNhap('Không nối được máy chủ. Thử lại khi có mạng.'); });
+})();
+
+// ============================================================
+// BẢNG PHÂN CÔNG
+// ============================================================
+var ngayXem = '', congTy = [], danhBa = [], tenTheoKhoa = {};
+var banDau = {};      // trạng thái máy chủ trả về: {ma_ct: {khoa:true}}
+var chon = {};        // trạng thái đang sửa
+var coDinh = {};      // người phụ trách CỐ ĐỊNH — hiện ra để biết, không sửa được
+var anHan = 1, ctDangMo = null, laQuanTri = false, nhomToi = [];
+
+function moNgay(ngay) {
+  ngayXem = ngay;
+  $('ng_nay').classList.toggle('dang', ngay === ngayCong(0));
+  $('ng_mai').classList.toggle('dang', ngay === ngayCong(1));
+  $('ct_tom').textContent = 'Đang tải…';
+  $('ct_tim').value = '';
+  $('ct_noi').innerHTML = '';
+  $('ct_thanh').classList.add('an');
+  hien('man_ct');
+  goiAPI({ token: TOKEN_API, hanh_dong: 'pc_bang', ngay: ngay })
+    .then(function (kq) {
+      if (!kq) return;
+      if (!kq.ok) { $('ct_tom').textContent = kq.loi || 'Không lấy được bảng phân công.'; return; }
+      congTy = kq.cong_ty || [];
+      danhBa = kq.danh_ba || [];
+      coDinh = kq.co_dinh || {};
+      anHan = Number(kq.an_han_ngay || 1);
+      laQuanTri = !!kq.la_quan_tri;
+      nhomToi = kq.ds_nhom || [];
+      tenTheoKhoa = {};
+      danhBa.forEach(function (o) { tenTheoKhoa[o.khoa] = o; });
+      banDau = {}; chon = {};
+      congTy.forEach(function (c) {
+        banDau[c.ma_ct] = {}; chon[c.ma_ct] = {};
+        ((kq.dang_co || {})[c.ma_ct] || []).forEach(function (k) {
+          banDau[c.ma_ct][k] = true; chon[c.ma_ct][k] = true;
+        });
+      });
+      $('ct_tom').textContent = (kq.ten_chuc_vu || '') +
+        (laQuanTri ? ' · mọi nhóm' : (nhomToi.length ? ' · nhóm ' + nhomToi.join(', ').toUpperCase() : '')) +
+        ' · ngày ' + (kq.ngay_hien_thi || ngay) + ' · ' + congTy.length + ' công ty';
+      veCongTy();
+    })
+    .catch(function () { $('ct_tom').textContent = 'Không nối được máy chủ.'; });
+}
+
+$('ng_mai').addEventListener('click', function () { if (ngayXem !== ngayCong(1)) moNgay(ngayCong(1)); });
+$('ng_nay').addEventListener('click', function () { if (ngayXem !== ngayCong(0)) moNgay(ngayCong(0)); });
+
+function soChon(maCT) { return Object.keys(chon[maCT] || {}).length; }
+function soCoDinh(maCT) { return ((coDinh || {})[maCT] || []).length; }
+
+function veCongTy() {
+  if (!congTy.length) {
+    $('ct_tim').classList.add('an');
+    $('ct_noi').innerHTML = '<div class="trong">Bạn chưa được phân phạm vi công ty nào, '
+      + 'nên chưa có gì để chốt. Báo người phụ trách khai thêm cho bạn.</div>';
+    return;
+  }
+  // Ô lọc chỉ hiện khi danh sách đủ dài để phải cuộn. Vài nhà máy mà bày thêm một ô nhập
+  // thì chỉ tổ chật màn hình, ngón tay lại phải né thêm một chỗ.
+  $('ct_tim').classList.toggle('an', congTy.length <= 6);
+
+  var cum = congTy.length > 6 ? ($('ct_tim').value || '') : '';
+  var h = '', hienRa = 0;
+  congTy.forEach(function (c) {
+    // Lọc theo TÊN nhà máy, MÃ nhà máy, và cả MÃ NHÓM — quản trị nhìn nhiều nhóm cùng lúc
+    // thì gõ "bg1" ra đúng cụm của nhóm đó là nhanh nhất.
+    if (!khop(c.ten_cong_ty + ' ' + c.ma_ct + ' ' + (c.nhom || ''), cum)) return;
+    hienRa++;
+    var n = soChon(c.ma_ct), cd = soCoDinh(c.ma_ct);
+    var phu = (n ? n + ' người được phân' : 'chưa phân ai')
+      + (cd ? ' · ' + cd + ' người cố định' : '');
+    h += '<button type="button" class="the-ct" data-ct="' + thoat(c.ma_ct) + '">'
+      +   '<span class="so' + (n ? ' co' : '') + '">' + n + '</span>'
+      +   '<span class="ten"><b>' + thoat(c.ten_cong_ty) + '</b>'
+      +     '<span>' + (c.loai === 'chinh_thuc' ? 'chính thức' : 'thời vụ')
+      +       (laQuanTri && c.nhom ? ' · nhóm ' + thoat(c.nhom.toUpperCase()) : '')
+      +       ' · ' + phu + '</span></span>'
+      +   '<span class="mui">›</span>'
+      + '</button>';
+  });
+  if (!hienRa) {
+    h = '<div class="trong">Không có nhà máy nào khớp "' + thoat(cum) + '".</div>';
+  }
+  h += '<div class="nhac">'
+    + (laQuanTri ? 'Bạn là <b>quản trị</b> nên thấy mọi nhóm.'
+                 : 'Bạn chỉ phân công được <b>công ty và nhân viên trong nhóm của mình</b>. '
+                   + 'Thiếu ai hoặc thiếu công ty nào thì báo quản trị xếp nhóm cho họ.') + '<br>'
+    + (congTy.length > 1 ? 'Danh sách nhà máy xếp <b>A→Z theo tên</b>.<br>' : '')
+    + 'Người <b>cố định</b> (nền vàng) do quản trị khai trong bảng tính, '
+    + 'trang này không gỡ được — cứ để yên.<br>'
+    + 'Bảng này là <b>thường trực</b>: chốt một lần rồi dùng mãi, mỗi ngày máy tự gửi lại '
+    + 'vào nhóm. Chỉ mở trang này khi <b>có thay đổi</b>.<br>'
+    + 'Bỏ tích một người thì quyền của họ <b>không mất ngay</b>: còn dùng được tới hết '
+    + (anHan === 1 ? 'ngày mai' : anHan + ' ngày nữa') + ', đủ để họ báo nốt việc đang làm dở.</div>';
+  $('ct_noi').innerHTML = h;
+  Array.prototype.forEach.call($('ct_noi').querySelectorAll('.the-ct'), function (b) {
+    b.addEventListener('click', function () { moCongTy(b.getAttribute('data-ct')); });
+  });
+  capNhatThanh();
+}
+
+function tinhDoi() {
+  var them = [], bot = [];
+  congTy.forEach(function (c) {
+    Object.keys(chon[c.ma_ct] || {}).forEach(function (k) {
+      if (!banDau[c.ma_ct][k]) them.push({ ma_ct: c.ma_ct, ten_cong_ty: c.ten_cong_ty, khoa: k });
+    });
+    Object.keys(banDau[c.ma_ct] || {}).forEach(function (k) {
+      if (!chon[c.ma_ct][k]) bot.push({ ma_ct: c.ma_ct, ten_cong_ty: c.ten_cong_ty, khoa: k });
+    });
+  });
+  return { them: them, bot: bot };
+}
+
+function capNhatThanh() {
+  var d = tinhDoi();
+  var tong = 0;
+  congTy.forEach(function (c) { tong += soChon(c.ma_ct); });
+  $('ct_thanh').classList.remove('an');
+  if (!d.them.length && !d.bot.length) {
+    $('ct_tt').innerHTML = 'Tổng <b>' + tong + '</b> lượt phân công · chưa sửa gì so với bảng đang có';
+  } else {
+    $('ct_tt').innerHTML = 'Tổng <b>' + tong + '</b> lượt phân công · '
+      + (d.them.length ? '<b>+' + d.them.length + '</b> thêm ' : '')
+      + (d.bot.length ? '<b>−' + d.bot.length + '</b> bỏ' : '');
+  }
+}
+
+// ------------------------------------------------------------
+// Tích người cho MỘT công ty
+// ------------------------------------------------------------
+/*
+ * Cố ý làm "một công ty một màn" chứ không bày lưới người × công ty: 12 người × 17 nhà máy
+ * là 204 ô tích trên màn 375px, ngón tay không bấm nổi. Mỗi màn chỉ còn chừng chục dòng.
+ */
+function moCongTy(maCT) {
+  ctDangMo = maCT;
+  var c = congTy.filter(function (x) { return x.ma_ct === maCT; })[0];
+  if (!c) return;
+  $('ng_ten').textContent = c.ten_cong_ty;
+  $('ng_tom').textContent = (c.loai === 'chinh_thuc' ? 'chính thức' : 'thời vụ')
+    + ' · ngày ' + ngayXem.split('-').reverse().join('/');
+  $('ng_tim').value = '';
+  hien('man_ng');
+  veNguoi();
+}
+
+function veNguoi() {
+  var maCT = ctDangMo;
+  var cum = $('ng_tim').value || '';
+  var khoaCoDinh = {};
+  ((coDinh || {})[maCT] || []).forEach(function (k) { khoaCoDinh[k] = true; });
+
+  var h = '', hienRa = 0;
+  danhBa.forEach(function (o) {
+    if (!khop(o.ten_nguoi, cum)) return;
+    hienRa++;
+    var laCoDinh = !!khoaCoDinh[o.khoa];
+    var daChon = !!(chon[maCT] || {})[o.khoa];
+    var phu = o.cccd_che + (o.sdt ? ' · ' + o.sdt : '')
+      + (o.chuc_vu ? ' · ' + o.ten_chuc_vu.toLowerCase() : '')
+      + (laQuanTri && o.nhom ? ' · nhóm ' + o.nhom.toUpperCase() : '');
+    h += '<button type="button" class="ng' + (laCoDinh ? ' khoa' : (daChon ? ' chon' : ''))
+      +   '" data-khoa="' + thoat(o.khoa) + '"' + (laCoDinh ? ' disabled' : '') + '>'
+      +   '<span class="tick">' + (laCoDinh ? '🔒' : (daChon ? '✓' : '')) + '</span>'
+      +   '<span class="ten"><b>' + thoat(o.ten_nguoi || '(chưa đặt tên)')
+      +     (o.co_mat_khau ? '' : '<span class="canh">chưa có mật khẩu</span>') + '</b>'
+      +     '<span>' + thoat(phu) + (laCoDinh ? ' · phụ trách cố định' : '') + '</span></span>'
+      + '</button>';
+  });
+  if (!hienRa) {
+    h = '<div class="trong">' + (cum ? 'Không có ai khớp "' + thoat(cum) + '".'
+      : 'Chưa khai ai vào danh bạ người đón. Báo người phụ trách thêm vào bảng tính.') + '</div>';
+  }
+  $('ng_noi').innerHTML = h;
+  Array.prototype.forEach.call($('ng_noi').querySelectorAll('.ng:not([disabled])'), function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-khoa');
+      if (chon[maCT][k]) delete chon[maCT][k]; else chon[maCT][k] = true;
+      veNguoi();
+    });
+  });
+  var n = soChon(maCT), cd = soCoDinh(maCT);
+  $('ng_tt').innerHTML = '<b>' + n + '</b> người được phân'
+    + (cd ? ' · <b>' + cd + '</b> cố định (không sửa được ở đây)' : '');
+}
+
+$('ng_tim').addEventListener('input', veNguoi);
+$('ct_tim').addEventListener('input', veCongTy);
+$('nut_ve').addEventListener('click', function () { hien('man_ct'); veCongTy(); });
+
+// ------------------------------------------------------------
+// Chốt
+// ------------------------------------------------------------
+$('nut_chot').addEventListener('click', function () {
+  var d = tinhDoi();
+  if (d.bot.length) {
+    var ds = d.bot.slice(0, 6).map(function (x) {
+      return '· ' + ((tenTheoKhoa[x.khoa] || {}).ten_nguoi || 'người này') + ' — ' + x.ten_cong_ty;
+    }).join('\n');
+    if (d.bot.length > 6) ds += '\n· … và ' + (d.bot.length - 6) + ' người nữa';
+    if (!confirm('Những người sau sẽ THÔI phụ trách:\n\n' + ds
+      + '\n\nHọ vẫn xem được danh sách tới hết '
+      + (anHan === 1 ? 'ngày mai' : anHan + ' ngày nữa') + ' rồi mới mất quyền.'
+      + '\n\nNhững người còn lại giữ quyền vô thời hạn tới khi bạn sửa lại.\n\nĐồng ý chốt?')) return;
+  }
+
+  var goi = congTy.map(function (c) {
+    return { ma_ct: c.ma_ct, ds: Object.keys(chon[c.ma_ct] || {}) };
+  });
+  var n = this; n.disabled = true; n.textContent = 'Đang chốt…';
+  goiAPI({ token: TOKEN_API, hanh_dong: 'pc_luu', ngay: ngayXem, phan_cong: goi })
+    .then(function (kq) {
+      if (!kq) return;
+      if (!kq.ok) { alert(kq.loi || 'Không chốt được.'); return; }
+      veKetQua(kq);
+    })
+    .catch(function () { alert('Không nối được máy chủ. Bảng chưa được chốt, thử lại khi có mạng.'); })
+    .then(function () { n.disabled = false; n.textContent = 'Chốt & gửi thông báo'; });
+});
+
+function veKetQua(kq) {
+  $('xong_phu').textContent = 'Ngày ' + (kq.ngay_hien_thi || kq.ngay);
+  var h = '<div class="xong">'
+    + '<b>Quyền đã sửa xong.</b><br>'
+    + 'Cấp mới: <b>' + (kq.cap_moi || 0) + '</b> · bật lại: <b>' + (kq.gia_han || 0) + '</b> · '
+    + 'gỡ: <b>' + (kq.go_bo || 0) + '</b><br>'
+    + (kq.go_bo ? 'Người bị gỡ còn xem được tới hết ngày <b>'
+        + String(kq.het_han_ngay || '').split('-').reverse().join('/') + '</b>.<br>' : '')
+    + 'Người được phân mở trang danh sách là thấy ngay, <b>không phải đăng nhập lại</b>, '
+    + 'và quyền đó <b>không hết hạn</b>.<br>'
+    + 'Bảng này giữ nguyên hiệu lực mọi ngày tới khi bạn sửa lại — <b>không phải vào bấm mỗi sáng</b>.'
+    + '</div>';
+  if (kq.chua_khai_nhom) {
+    h += '<div class="xong xau"><b>Chưa gửi được thông báo.</b><br>'
+      + 'Chưa khai nhóm Zalo nhận bảng phân công (ô <b>nhom_phan_cong</b> trong '
+      + 'bảng tính). Quyền thì đã sửa xong rồi, chỉ là cả nhóm chưa được báo.</div>';
+  } else {
+    h += '<div class="xong"><b>Đã gửi ' + (kq.so_tin || 0)
+      + ' tin vào nhóm trưởng nhóm.</b><br>Cả nhóm biết ai phụ trách công ty nào, kèm số điện thoại.</div>';
+  }
+  if (kq.nguoi_ngoai_nhom) {
+    h += '<div class="xong xau"><b>Bỏ qua ' + kq.nguoi_ngoai_nhom
+      + ' lượt tích người ngoài nhóm của bạn.</b><br>'
+      + 'Chỉ phân công được người cùng nhóm. Nếu đúng là người của bạn thì báo quản trị '
+      + 'xếp họ vào nhóm trong bảng tính.</div>';
+  }
+  if (kq.ngoai_pham && kq.ngoai_pham.length) {
+    h += '<div class="xong xau"><b>Bỏ qua ' + kq.ngoai_pham.length + ' công ty ngoài phạm vi của bạn:</b><br>'
+      + thoat(kq.ngoai_pham.join(', ')) + '</div>';
+  }
+  $('xong_noi').innerHTML = h;
+  hien('man_xong');
+}
+
+$('nut_lai').addEventListener('click', function () { moNgay(ngayXem || ngayCong(1)); });
+</script>
+</body>
+</html>
