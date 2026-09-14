@@ -228,11 +228,19 @@
      ngày 01/09 thì bản JavaScript đọc được 0/4, bản WASM đọc 4/4 và nhanh gấp ~20 lần
      (~40ms/lượt thay vì ~1,1 giây). Bỏ nó còn tiết kiệm 330KB tải về. -->
 <script src="https://unpkg.com/zxing-wasm@3.1.3/dist/iife/reader/index.js"></script>
+<script src="cau-hinh.js"></script>
 <script>
-// ====== CẤU HÌNH ======
-var URL_API   = 'https://script.google.com/macros/s/AKfycby1EldZql-1j9H3vaoZdK2e7CfEHZAyyHW-SiTkY4rFWUrb-jHODY68x-OWGVAFlKzU/exec';
-var TOKEN_API = 'd905baa65db6457e830d8f40';
-// ======================
+// ====== CẤU HÌNH: URL_API + TOKEN_API nằm ở tệp cau-hinh.js, dùng chung cho cả 4 trang ======
+// Thiếu tệp đó (quên tải lên, mạng chập) hoặc tệp chưa điền link thì nói thẳng ra màn hình,
+// đừng để trang chết lặng ở lần gọi máy chủ đầu tiên.
+if (typeof URL_API === 'undefined' || typeof TOKEN_API === 'undefined' || !URL_API) {
+  window.URL_API = window.URL_API || '';
+  window.TOKEN_API = window.TOKEN_API || '';
+  document.body.insertAdjacentHTML('afterbegin', '<div style="background:#b71c1c;color:#fff;padding:14px;' +
+    'font-weight:bold;text-align:center">Trang chưa nối được máy chủ: không đọc được tệp cau-hinh.js ' +
+    '(chưa tải lên, mạng chập, hoặc chưa điền URL_API).<br>Tải lại trang. Vẫn thấy dòng này thì báo quản trị.</div>');
+}
+// ==========================================================================================
 
 var $ = function (id) { return document.getElementById(id); };
 var nguoiDon = '', demDaDon = 0, dangBan = false;
