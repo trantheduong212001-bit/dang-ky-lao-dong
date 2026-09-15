@@ -258,9 +258,9 @@
   <div class="khoi">
     <label class="tick"><input type="checkbox" id="dong_y">
       <span>Người đăng ký đồng ý cho xử lý <b>số CCCD, họ tên, ngày sinh, nơi thường trú, số điện thoại</b>
-      nhằm mục đích tuyển dụng và điều phối đón lao động; đồng ý gửi <b>họ tên và 4 số cuối CCCD</b>
-      vào <b>nhóm nội bộ của đội điều phối</b>; dữ liệu lưu trên <b>Google Sheets (máy chủ ở nước ngoài)</b>
-      tối đa <b>90 ngày</b>, có quyền yêu cầu xem, sửa hoặc xoá bất cứ lúc nào.</span></label>
+      nhằm mục đích tuyển dụng và điều phối đón lao động; đồng ý gửi <b>họ tên, 4 số cuối CCCD và ảnh 2 mặt thẻ căn cước (nếu có chụp)</b>
+      vào <b>nhóm Zalo điều phối của nhà máy hoặc của mảng tuyển dụng</b> — nhóm của nhà máy có thể có người của nhà máy; dữ liệu lưu trên <b>Google Sheets (máy chủ ở nước ngoài)</b>
+      tối đa <b>90 ngày</b>; ảnh chỉ nằm trên Google Drive vài phút để chuyển vào Zalo rồi bị xoá hẳn; có quyền yêu cầu xem, sửa hoặc xoá bất cứ lúc nào.</span></label>
   </div>
 
   <button type="submit" class="nut" id="nut_dk">Xác nhận nộp</button>
@@ -1437,7 +1437,7 @@ $('form').addEventListener('submit', function (ev) {
     ghi_chu: $('ghi_chu').value.trim(),
     nguoi_nhap: nn,
     ngay_cap: ngayCap, cmnd_cu: cmndCu,
-    nguon_nhap: nguonNhap, qr_tho: qrTho, dong_y: true
+    nguon_nhap: nguonNhap, qr_tho: qrTho, dong_y: true, ban_dieu_khoan: 'v1.1'
   };
   try { localStorage.setItem('nguoi_nhap', nn); } catch (e) {}
 
@@ -1619,7 +1619,7 @@ function veTinhTrang(kq) {
   if (kq.canh_bao_cheo) them += '<p style="color:var(--canh)">(!) ' + thoat(kq.canh_bao_cheo) + '</p>';
 
   // Khối gửi ảnh thẻ (bản 3.23): chỉ khi phiếu VỪA được nhận, có mã, và máy chủ báo đã bật.
-  var coAnh = loai === 'tot' && !!ma && anhCH.bat;
+  var coAnh = loai === 'tot' && !!ma && dsCT.some(function (c) { return c.ma_ct === maCT && c.co_anh === true; });
   $('man_tt').className = 'tt ' + loai;
   $('man_tt').innerHTML =
     '<div class="vong">' + dau + '</div><h2>' + tieu + '</h2>' +
