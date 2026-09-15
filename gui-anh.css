@@ -1,0 +1,23 @@
+  /* ===== gửi ảnh thẻ CCCD sau khi đăng ký (bản 3.23) ===== */
+  .anhthe{margin:22px 0 0;padding:14px;border:1px solid var(--vien);border-radius:11px;
+          background:var(--the);text-align:left}
+  .anhthe b{font-size:15.5px}
+  .anhthe .mo{color:var(--mo);font-size:13px}
+  .anhthe p.mo{margin:10px 0 0}
+  .hai-o{display:flex;gap:10px;margin-top:11px}
+  /* Không dùng thuộc tính inset — webview trong Zalo có thể còn cũ */
+  .o-anh{flex:1;position:relative;height:108px;padding:0;border:1.5px dashed var(--xanh);border-radius:10px;
+         background:#f6fbf8;font-family:inherit;cursor:pointer;overflow:hidden}
+  .o-anh.co{border-style:solid}
+  .o-anh .xem{position:absolute;top:0;right:0;bottom:0;left:0;background-position:center;
+              background-size:cover;background-repeat:no-repeat}
+  .o-anh .nhan{position:absolute;left:0;right:0;bottom:0;padding:5px 4px;font-size:13.5px;font-weight:600;
+               color:var(--xanh-dam);background:rgba(255,255,255,.9)}
+  .dong-lk{display:flex;justify-content:space-between;gap:8px;margin-top:7px}
+  .lk-anh{padding:6px 0;border:0;background:none;font-family:inherit;font-size:13.5px;
+          color:var(--xanh-dam);text-decoration:underline;cursor:pointer}
+  .anhthe .nut.gui-anh{width:100%;margin:10px 0 0;padding:13px;font-size:16px}
+  .tt-anh{margin-top:9px;font-size:13.5px;line-height:1.4;color:var(--mo)}
+  .tt-anh.xong{color:var(--tot);font-weight:600}
+  .tt-anh.loi{color:var(--loi)}
+

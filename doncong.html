@@ -81,6 +81,7 @@
   .chon small{display:block;font-size:12.5px;color:var(--mo);line-height:1.4;margin-top:1px}
   .an{display:none}
 </style>
+<link rel="stylesheet" href="gui-anh.css">
 </head>
 <body>
 <div class="boc">
@@ -344,6 +345,7 @@ function tachQR(chuoi) {
 goiAPI({ token: TOKEN_API, hanh_dong: 'danh_sach_cong_ty' })
   .then(function (kq) {
     dsCT = (kq && kq.danh_sach) || [];
+    if (kq && kq.anh) anhCH = kq.anh;
     var dl = $('ds_nm');
     dsCT.forEach(function (c) {
       var o = document.createElement('option'); o.value = c.ten_cong_ty; dl.appendChild(o);
@@ -1108,6 +1110,8 @@ $('nut_tay').addEventListener('click', function () {
  */
 function traCuu(cccd, q) {
   if (dangBan) return;
+  if (anhDangGui) { alert('Ảnh đang gửi, chờ gửi xong rồi đón người tiếp theo.'); return; }
+  datLaiAnh();
   dangBan = true;
   qrHienTai = q;
   nguoiHienTai = { cccd: cccd, q: q, tra: null };
@@ -1245,6 +1249,7 @@ $('nut_moi_gui').addEventListener('click', function () {
 
 // ---------- Gửi lên hệ thống ----------
 function guiDon(them) {
+  if (anhDangGui) { alert('Chờ gửi ảnh xong rồi đón người tiếp theo.'); return; }
   var body = { token: TOKEN_API, hanh_dong: 'da_don', nguoi_don: nguoiDon };
   for (var k in them) if (them.hasOwnProperty(k)) body[k] = them[k];
   var cccd = body.so_cccd;
@@ -1259,6 +1264,7 @@ function guiDon(them) {
       veKetQua('tot', 'ĐĂNG KÝ VÀ ĐÃ ĐÓN — ' + (kq.ten_cong_ty || ''), kq.ho_ten,
         'Mã ' + kq.ma_ld + ' · Đón tại ' + (kq.diem_don_thuc || '?') + ' · ' + (kq.gio || ''));
       themLichSu('tot', kq.ho_ten, 'đăng ký + đón · ' + (kq.ten_cong_ty || ''));
+      hienAnhSauDon(kq, body.ma_ct);
     } else if (kq.ma === 'DA_DON') {
       demDaDon++; $('ht_dem').textContent = demDaDon;
       veKetQua('tot', kq.ten_cong_ty || 'Đã đón', kq.ho_ten,
@@ -1291,6 +1297,16 @@ function guiDon(them) {
   });
 }
 
+
+function hienAnhSauDon(kq, maCT) {
+  if (!kq.ok || kq.ma !== 'DANG_KY_VA_DON' || !kq.ma_ld) return;
+  if (!dsCT.some(function (c) { return c.ma_ct === maCT && c.co_anh === true; })) return;
+  $('o_kq').insertAdjacentHTML('beforeend',
+    '<label style="display:block;margin:14px;line-height:1.5"><input type="checkbox" id="dong_y_anh"> ' +
+    'Người lao động đồng ý gửi ảnh căn cước vào nhóm Zalo điều phối của nhà máy hoặc mảng tuyển dụng. ' +
+    'Ảnh chuyển qua Google Drive rồi được dọn sau khi gửi.</label>' + khoiAnhHTML());
+  ganKhoiAnh(kq.ma_ld);
+}
 
 function veKetQua(loai, nhan, ten, phu) {
   $('o_kq').innerHTML = '<div class="kq ' + loai + '">' +
@@ -1336,5 +1352,9 @@ $('nut_bao_cao').addEventListener('click', function () {
     .then(function () { n.disabled = false; n.textContent = 'Gửi bảng tổng hợp vào nhóm ngay'; });
 });
 </script>
+<input type="file" id="file_anh_truoc" accept="image/*" class="an">
+<input type="file" id="file_anh_sau" accept="image/*" class="an">
+<input type="file" id="file_anh_ca_hai" accept="image/*" multiple class="an">
+<script src="gui-anh.js"></script>
 </body>
 </html>
