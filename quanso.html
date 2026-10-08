@@ -36,6 +36,20 @@
   .an{display:none !important}
   button{font-family:inherit}
 
+  /* Lớp báo ĐANG TẢI — phủ màn khi chờ máy chủ (các lượt đọc quân số lâu 2–5 giây). */
+  .che-tai{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+    background:rgba(31,41,51,.38)}
+  .che-hop{background:#fff;border-radius:14px;padding:22px 26px;min-width:210px;max-width:84%;text-align:center;
+    box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  .che-xoay{width:34px;height:34px;margin:0 auto 12px;border:3px solid var(--xam-nut);
+    border-top-color:var(--xanh);border-radius:50%;animation:che-quay .8s linear infinite}
+  @keyframes che-quay{to{transform:rotate(360deg)}}
+  .che-chu{font-size:14px;color:var(--chu);font-weight:600;line-height:1.45}
+
+  /* Thanh ĐO TỐC ĐỘ (chẩn đoán 3.29) — hiện ở đáy màn, chỉ bật khi có số đo. */
+  .do-chi{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#1f2933;color:#cfd8e3;
+    font-size:11px;line-height:1.45;padding:6px 10px;white-space:pre-wrap;word-break:break-word}
+
   .dinh{text-align:center;padding:18px 16px 8px}
   .dinh b{font-size:17.5px}
   .dinh .phu{font-size:13px;color:var(--mo);margin-top:3px}
@@ -171,6 +185,18 @@
 </style>
 </head>
 <body>
+
+<!-- Lớp báo ĐANG TẢI (ẩn sẵn; hiện khi chờ máy chủ quá 300ms) -->
+<div id="che_tai" class="che-tai an" role="status" aria-live="polite">
+  <div class="che-hop">
+    <div class="che-xoay"></div>
+    <div class="che-chu" id="che_tai_chu">Đang tải dữ liệu, vui lòng đợi…</div>
+  </div>
+</div>
+
+<!-- Thanh ĐO TỐC ĐỘ (chẩn đoán 3.29) — ẩn sẵn, hiện số đo sau mỗi lượt đọc lâu -->
+<div id="do_chi" class="do-chi an"></div>
+
 <div class="boc">
 
 <!-- ===== ĐĂNG NHẬP ===== -->
@@ -328,18 +354,54 @@ function datPhien(p) {
   try { p ? localStorage.setItem(KHOA_PHIEN, p) : localStorage.removeItem(KHOA_PHIEN); } catch (e) {}
 }
 
-/** Mọi lượt gọi tự kèm vé, và tự đá về màn đăng nhập khi vé hết hạn hoặc bị thu hồi. */
-function goiAPI(body) {
+// ---- Lớp báo ĐANG TẢI: đếm số lượt đang chờ, chỉ hiện sau 300ms để cú nhanh không chớp nháy ----
+var _cheDem = 0, _cheTimer = null;
+var CHE_MAC_DINH = 'Đang tải dữ liệu, vui lòng đợi…';
+function moChe(msg) {
+  _cheDem++;
+  if (msg) $('che_tai_chu').textContent = msg;
+  if (!_cheTimer) _cheTimer = setTimeout(function () { $('che_tai').classList.remove('an'); }, 300);
+}
+function dongChe() {
+  _cheDem = Math.max(0, _cheDem - 1);
+  if (_cheDem > 0) return;
+  if (_cheTimer) { clearTimeout(_cheTimer); _cheTimer = null; }
+  $('che_tai').classList.add('an');
+  $('che_tai_chu').textContent = CHE_MAC_DINH;
+}
+
+// ---- ĐO TỐC ĐỘ (chẩn đoán 3.29): trang chờ bao lâu · máy chủ xử lý bao lâu (từng bước) · ước lượng mạng ----
+function s1(ms) { return (ms / 1000).toFixed(1) + 's'; }
+function hienDo(nhan, tTrangMs, kq) {
+  var el = $('do_chi'); if (!el) return;
+  var sv = (kq && kq._do) ? kq._do : null;
+  var s = '⏱ ' + nhan + ': trang chờ ' + s1(tTrangMs);
+  if (sv) {
+    s += ' · máy chủ ' + s1(sv.tong_ms) + ' (' + (sv.buoc || []).join(' · ') + ')' +
+         ' · mạng ~' + s1(Math.max(0, tTrangMs - sv.tong_ms));
+  } else {
+    s += ' · (máy chủ chưa gửi số đo — bản cũ?)';
+  }
+  el.textContent = s;
+  el.classList.remove('an');
+}
+
+/** Mọi lượt gọi tự kèm vé, và tự đá về màn đăng nhập khi vé hết hạn hoặc bị thu hồi.
+    choMsg: câu hiện trên lớp báo đang tải (để trống = câu mặc định). */
+function goiAPI(body, choMsg) {
   var b = body || {};
   if (!b.phien) b.phien = layPhien();
+  moChe(choMsg);
   var goi = typeof goiMayChu_ === 'function' ? goiMayChu_(b)
     : fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                        body: JSON.stringify(b) }).then(function (r) { return r.json(); });
   return goi
     .then(function (kq) {
+      dongChe();
       if (kq && kq.ma === 'HET_PHIEN') { datPhien(''); veManDangNhap('Phiên đăng nhập đã hết. Xin đăng nhập lại — phần đã lưu nháp vẫn còn.'); }
       return kq;
-    });
+    })
+    .catch(function (e) { dongChe(); throw e; });
 }
 
 function thoat(s) {
@@ -443,9 +505,11 @@ function moNgay(ngay) {
   $('ds_loi').classList.add('an');
   $('ds_thanh').classList.add('an');
   hien('man_ds');
-  goiAPI({ token: TOKEN_API, hanh_dong: 'qs_don_vi', ngay: ngay })
+  var _doT0 = Date.now();
+  goiAPI({ token: TOKEN_API, hanh_dong: 'qs_don_vi', ngay: ngay }, 'Đang tải danh sách công ty…')
     .then(function (kq) {
       if (!kq) return;
+      hienDo('danh sách công ty', Date.now() - _doT0, kq);
       if (!kq.ok) { $('ds_tom').textContent = 'Ngày ' + ngayVN(ngay); hienLoi('ds_loi', kq.loi || 'Không lấy được danh sách.'); return; }
       homNay = kq.hom_nay || homNay;
       $('ds_ngay').max = homNay;
@@ -524,9 +588,11 @@ $('nut_bat_dau').addEventListener('click', function () {
       khoa.length === luot.dv.length) { moDonVi(luot.i); return; }
   var ds = dsDonVi.filter(function (d) { return chon[d.khoa]; }).map(function (d) { return { ma_ct: d.ma_ct, ca: d.ca }; });
   var n = this; n.disabled = true; n.textContent = 'Đang lấy số nền và người mới…';
-  goiAPI({ token: TOKEN_API, hanh_dong: 'qs_mo', ngay: ngayBao, ds: ds })
+  var _doT0 = Date.now();
+  goiAPI({ token: TOKEN_API, hanh_dong: 'qs_mo', ngay: ngayBao, ds: ds }, 'Đang lấy số nền và người mới…')
     .then(function (kq) {
       if (!kq) return;
+      hienDo('mở ' + ds.length + ' đơn vị', Date.now() - _doT0, kq);
       if (!kq.ok) { hienLoi('ds_loi', kq.loi || 'Không mở được các đơn vị.'); return; }
       luot = { ngay: kq.ngay, bien: kq.bien, tenO: kq.ten_o || {}, dv: [], i: 0, maYC: '', tuDuyet: false };
       var boQua = [];
