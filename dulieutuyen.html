@@ -127,7 +127,10 @@
   .hai button.phu{background:var(--xam-nut);color:#3c4753;flex:0 0 32%}
   .tien{font-size:13px;color:#163f7a;margin-top:8px}
   /* 3.36: link về trang chủ */
-  .ve-chu{display:inline-block;margin:10px 0 0 14px;font-size:13.5px;color:#2d6cdf;text-decoration:none}
+  /* Dương 24/10/2026: nút quay lại phải nhìn ra ngay — biểu tượng to + chữ "Về Trang chủ" */
+  .ve-chu{display:inline-flex;align-items:center;gap:7px;margin:10px 0 0 14px;padding:7px 14px 7px 10px;border:1px solid #c9d8f2;
+    border-radius:22px;background:#eef4fd;color:#1d5fbf;font-size:15px;font-weight:700;text-decoration:none}
+  .ve-chu-ic{font-size:22px;line-height:1}
 </style>
 <script src="ngoai-zalo.js" defer></script>
 </head>
@@ -158,7 +161,7 @@
 
 <!-- DANH SÁCH -->
 <div id="man_ds" class="an">
-  <a class="ve-chu" href="trangchu.html">⌂ Trang chủ</a>
+  <a class="ve-chu" href="trangchu.html"><span class="ve-chu-ic" aria-hidden="true">🏠</span>Về Trang chủ</a>
   <div class="dinh">
     <div class="ten-trang"><b>Dữ liệu tuyển</b><div class="phu" id="ds_ai">—</div></div>
     <button type="button" id="nut_thoat">Đăng xuất</button>

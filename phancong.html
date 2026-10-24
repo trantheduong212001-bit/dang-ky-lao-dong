@@ -123,7 +123,10 @@
   .xem-tin{margin:0 14px;padding:12px 13px;border-radius:10px;background:#fff;border:1px solid var(--vien);
     font:12.5px/1.65 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word;color:#3c4753}
   /* 3.36: link về trang chủ · bảng cũ đang chờ bản mới thì mờ đi · dải "có thể đã có số mới" */
-  .ve-chu{display:inline-block;margin:10px 0 0 14px;font-size:13.5px;color:#2d6cdf;text-decoration:none}
+  /* Dương 24/10/2026: nút quay lại phải nhìn ra ngay — biểu tượng to + chữ "Về Trang chủ" */
+  .ve-chu{display:inline-flex;align-items:center;gap:7px;margin:10px 0 0 14px;padding:7px 14px 7px 10px;border:1px solid #c9d8f2;
+    border-radius:22px;background:#eef4fd;color:#1d5fbf;font-size:15px;font-weight:700;text-decoration:none}
+  .ve-chu-ic{font-size:22px;line-height:1}
   .cu-mo{opacity:.55}
   .nhac button{margin-left:6px;padding:4px 10px;border:1px solid #e0c98a;border-radius:7px;background:#fff;
     font:inherit;font-weight:600;color:#6b4e00;cursor:pointer}
@@ -162,7 +165,7 @@
 
 <!-- ===== DANH SÁCH CÔNG TY ===== -->
 <div id="man_ct" class="an">
-  <a class="ve-chu" href="trangchu.html">⌂ Trang chủ</a>
+  <a class="ve-chu" href="trangchu.html"><span class="ve-chu-ic" aria-hidden="true">🏠</span>Về Trang chủ</a>
   <div class="dinh">
     <b>PHÂN CÔNG ĐÓN</b>
     <div class="phu" id="ct_tom">—</div>

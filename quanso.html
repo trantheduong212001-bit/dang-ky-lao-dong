@@ -70,7 +70,10 @@
   .nhan{font-size:13.5px;color:var(--mo);margin-top:14px}
   .loi{margin:12px 14px 0;padding:10px 12px;border-radius:9px;background:var(--do-nhat);color:#8a1c13;font-size:13.5px;white-space:pre-line}
   /* 3.36: link về trang chủ · danh sách cũ đang chờ bản mới thì mờ · nút trong dải "có thể đã có số mới" */
-  .ve-chu{display:inline-block;margin:10px 0 0 14px;font-size:13.5px;color:#2d6cdf;text-decoration:none}
+  /* Dương 24/10/2026: nút quay lại phải nhìn ra ngay — biểu tượng to + chữ "Về Trang chủ" */
+  .ve-chu{display:inline-flex;align-items:center;gap:7px;margin:10px 0 0 14px;padding:7px 14px 7px 10px;border:1px solid #c9d8f2;
+    border-radius:22px;background:#eef4fd;color:#1d5fbf;font-size:15px;font-weight:700;text-decoration:none}
+  .ve-chu-ic{font-size:22px;line-height:1}
   .cu-mo{opacity:.55}
   .nhac button{margin-left:6px;padding:4px 10px;border:1px solid #e0c98a;border-radius:7px;background:#fff;
     font:inherit;font-weight:600;cursor:pointer}
@@ -90,7 +93,16 @@
   .hang-ngay input{flex:1;min-width:0;padding:10px;font-size:16px;border:1px solid #d9dde2;border-radius:10px;background:#fff}
   .hang-ngay button{padding:10px 12px;border:1px solid var(--vien);background:#fff;border-radius:10px;font-size:14.5px;font-weight:600;color:#3c4753;cursor:pointer}
 
-  .nhom-ct{margin:12px 14px 0;font-size:13px;font-weight:700;color:var(--mo);text-transform:uppercase;letter-spacing:.02em}
+  /* 3.36: dòng TÊN CÔNG TY bấm được — chọn / bỏ cả các ca của công ty đó */
+  .ct-dong{display:flex;align-items:center;gap:10px;margin:14px 14px 0;padding:6px 2px;border:0;background:none;cursor:pointer;
+    width:calc(100% - 28px);text-align:left;font:inherit;color:var(--mo)}
+  .ct-dong b{flex:1;min-width:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+  .ct-dong .dem-ct{font-size:12.5px;font-weight:600;color:var(--xanh)}
+  .ct-dong.co b,.ct-dong.mot-phan b{color:var(--chu)}
+  .tick.mot-phan{background:#fff;border-color:var(--xanh);color:var(--xanh)}
+  .chon-nhanh{display:flex;gap:8px;padding:12px 14px 0}
+  .chon-nhanh button{flex:1;padding:10px 8px;border:1px solid var(--vien);background:#fff;border-radius:10px;
+    font:inherit;font-size:14px;font-weight:600;color:#3c4753;cursor:pointer}
   .dv{display:flex;align-items:center;gap:11px;margin:7px 14px 0;padding:12px 13px;border-radius:12px;background:var(--the);
     border:1px solid var(--vien);cursor:pointer;width:calc(100% - 28px);text-align:left;color:var(--chu);font-size:16px}
   .dv.chon{background:var(--xanh-nhat);border-color:#bfe0c9}
@@ -238,7 +250,7 @@
 
 <!-- ===== DANH SÁCH ĐƠN VỊ ===== -->
 <div id="man_ds" class="an">
-  <a class="ve-chu" href="trangchu.html">⌂ Trang chủ</a>
+  <a class="ve-chu" href="trangchu.html"><span class="ve-chu-ic" aria-hidden="true">🏠</span>Về Trang chủ</a>
   <div class="dinh">
     <b>BÁO QUÂN SỐ</b>
     <div class="phu" id="ds_tom">—</div>
@@ -257,6 +269,10 @@
   </div>
   <div class="mach" style="padding-bottom:0">Ca đêm tính theo ngày BẮT ĐẦU ca (ca đêm 06→07 là ngày 06).</div>
   <div class="loi an" id="ds_loi"></div>
+  <div class="chon-nhanh an" id="ds_chon_nhanh">
+    <button type="button" id="nut_chon_het">Chọn tất cả công ty được phân công</button>
+    <button type="button" id="nut_bo_chon" class="an">Bỏ các ô đã tích</button>
+  </div>
   <div id="ds_noi"></div>
   <div class="thanh an" id="ds_thanh">
     <div class="tt" id="ds_tt">—</div>
@@ -504,6 +520,7 @@ $('nut_thoat').addEventListener('click', function () {
   if (luot && !confirm('Lượt báo đang dở chưa gửi. Đăng xuất thì phần chưa lưu nháp sẽ mất. Vẫn đăng xuất?')) return;
   if (!luot && !confirm('Đăng xuất khỏi máy này?')) return;
   luot = null;
+  chon = {};   // 3.36: ô đã tích được giữ khi làm mới cùng ngày — người đăng nhập sau không được thừa hưởng
   if (typeof xoaHetBanNho_ === 'function') xoaHetBanNho_();   // 3.36
   datPhien('');
   veManDangNhap('');
@@ -593,6 +610,7 @@ function moNgay(ngay) {
   if (luot && luot.ngay !== ngay && !confirm('Lượt báo ngày ' + ngayVN(luot.ngay) + ' chưa gửi. Đổi ngày thì bỏ lượt đó ' +
       '(phần đã "Lưu & tiếp" vẫn còn trong nháp). Đổi ngày?')) { $('ds_ngay').value = luot.ngay; return; }
   if (luot && luot.ngay !== ngay) luot = null;
+  if (ngay !== ngayBao) chon = {};   // 3.36: ô đã tích thuộc ngày cũ; cùng ngày (làm mới) thì apDonVi giữ lại
   ngayBao = ngay;
   $('ds_ngay').value = ngay;
   $('ds_ngay').max = homNay;
@@ -644,11 +662,13 @@ function apDonVi(kq, ngay) {
   $('ng_toi').disabled = ngay >= homNay;
   dsDonVi = kq.don_vi || [];
   nhomNhan = kq.nhom_nhan || { ok: true };
-  // Giữ chọn của lượt đang dở; không thì mặc định chọn đơn vị CHƯA BÁO
+  // Giữ chọn của lượt đang dở; không thì giữ ô đang tích (lấy lại cùng ngày), còn lại KHÔNG tích gì — 3.36, Dương
+  // 24/10/2026: trước đây tự chọn mọi đơn vị chưa báo, công ty mình không báo cũng phải bấm bỏ từng ca.
+  var daTich = chon;
   chon = {};
   dsDonVi.forEach(function (d) {
     if (luot) { if (luot.dv.some(function (u) { return u.khoa === d.khoa; })) chon[d.khoa] = true; }
-    else if (!d.hien_hanh) chon[d.khoa] = true;
+    else if (daTich[d.khoa]) chon[d.khoa] = true;
   });
   $('ds_tom').textContent = (kq.ten_nguoi || '') + ' · ngày ' + (kq.ngay_hien_thi || ngayVN(ngay)) +
     (ngay === homNay ? ' (hôm nay)' : '') + ' · ' + dsDonVi.length + ' đơn vị';
@@ -687,7 +707,7 @@ function veDanhSach() {
   }
   var h = '', ctTruoc = '';
   dsDonVi.forEach(function (d) {
-    if (d.ma_ct !== ctTruoc) { h += '<div class="nhom-ct">' + thoat(d.ten_cong_ty) + (d.mang === 'chinh_thuc' ? ' · chính thức' : '') + '</div>'; ctTruoc = d.ma_ct; }
+    if (d.ma_ct !== ctTruoc) { h += dongCongTy(d); ctTruoc = d.ma_ct; }
     var tt = d.hien_hanh
       ? '<span class="nhan-tt xanh">Đã chốt' + (d.hien_hanh.phien_ban > 1 ? ' v' + d.hien_hanh.phien_ban : '') + '</span>' +
         'SL ' + soSL(d.hien_hanh.cuoi) + ' · ' + thoat(d.hien_hanh.nguoi_bao) + ' ' + thoat((d.hien_hanh.thoi_gian || '').slice(11, 16))
@@ -701,20 +721,48 @@ function veDanhSach() {
   $('ds_noi').innerHTML = h;
   capNhatThanhDS();
 }
+/* 3.36 — TÍCH THEO CÔNG TY (Dương yêu cầu 24/10/2026). Bấm tên công ty = chọn các ca của nó, bấm lần nữa = bỏ; vẫn bấm
+ * từng ca để thêm / bớt. Ca ĐÃ CHỐT không tự được chọn — chọn lại là đính chính bản người khác vừa báo — trừ khi cả
+ * công ty đã chốt hết: lúc đó bấm tên công ty là muốn báo lại cả công ty. */
+function donViCuaCT(maCt) { return dsDonVi.filter(function (d) { return d.ma_ct === maCt; }); }
+function dongCongTy(d) {
+  var ds = donViCuaCT(d.ma_ct), n = ds.filter(function (u) { return chon[u.khoa]; }).length;
+  var tt = !n ? '' : (n === ds.length ? 'co' : 'mot-phan');
+  return '<button type="button" class="ct-dong' + (tt ? ' ' + tt : '') + '" data-ct="' + thoat(d.ma_ct) + '">' +
+    '<span class="tick' + (tt ? ' ' + tt : '') + '">' + (tt === 'co' ? '✓' : (tt ? '–' : '')) + '</span>' +
+    '<b>' + thoat(d.ten_cong_ty) + (d.mang === 'chinh_thuc' ? ' · chính thức' : '') + '</b>' +
+    '<span class="dem-ct">' + (n ? n + '/' + ds.length : '') + '</span></button>';
+}
+function chonCongTy(maCt) {
+  var ds = donViCuaCT(maCt);
+  if (ds.some(function (d) { return chon[d.khoa]; })) { ds.forEach(function (d) { delete chon[d.khoa]; }); return; }
+  var chuaBao = ds.filter(function (d) { return !d.hien_hanh; });
+  (chuaBao.length ? chuaBao : ds).forEach(function (d) { chon[d.khoa] = true; });
+}
+/** "Chọn tất cả công ty được phân công": danh sách vốn chỉ có công ty mình được giao — chọn mọi ca CHƯA BÁO. */
+function chonTatCa() { dsDonVi.forEach(function (d) { if (!d.hien_hanh) chon[d.khoa] = true; }); }
+
 $('ds_noi').addEventListener('click', function (e) {
+  var c = e.target.closest('.ct-dong');
+  if (c) { chonCongTy(c.getAttribute('data-ct')); veDanhSach(); return; }
   var b = e.target.closest('.dv');
   if (!b) return;
   var k = b.getAttribute('data-khoa');
   if (chon[k]) delete chon[k]; else chon[k] = true;
   veDanhSach();
 });
+$('nut_chon_het').addEventListener('click', function () { chonTatCa(); veDanhSach(); });
+$('nut_bo_chon').addEventListener('click', function () { chon = {}; veDanhSach(); });
 function capNhatThanhDS() {
   var n = Object.keys(chon).length;
   $('ds_thanh').classList.toggle('an', !dsDonVi.length);
-  $('ds_tt').textContent = n ? 'Đã chọn ' + n + ' đơn vị cho lượt này — không bắt buộc chọn hết.' : 'Bấm vào đơn vị để chọn báo trong lượt này.';
+  $('ds_chon_nhanh').classList.toggle('an', !dsDonVi.length);
+  $('nut_bo_chon').classList.toggle('an', !n);
+  $('nut_bo_chon').textContent = 'Bỏ các ô đã tích (' + n + ')';
+  $('ds_tt').textContent = n ? 'Đã chọn ' + n + ' đơn vị cho lượt này — không bắt buộc chọn hết.' : 'Bấm vào tên công ty (hoặc từng ca) để chọn báo.';
   $('nut_bat_dau').disabled = !n || dangXemTruoc || dangTaiQS;   // 3.36: danh sách cũ đang chờ bản mới → chưa bắt đầu
   $('nut_bat_dau').textContent = luot ? 'Tiếp tục lượt đang dở (' + luot.dv.length + ' đơn vị)'
-    : (n ? 'Bắt đầu báo ' + n + ' đơn vị' : 'Chọn đơn vị để báo');
+    : (n ? 'Bắt đầu báo ' + n + ' đơn vị' : 'Chọn công ty để báo');
 }
 
 // ============================================================
