@@ -1,0 +1,15 @@
+{
+  "name": "Tuyển dụng — trang chủ",
+  "short_name": "Tuyển dụng",
+  "description": "Một chỗ vào mọi việc: danh sách gọi, phân công, quân số, dữ liệu tuyển, đăng ký, đón",
+  "lang": "vi",
+  "start_url": "trangchu.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1f9d55",
+  "icons": [
+    { "src": "icon-tc-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-tc-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
