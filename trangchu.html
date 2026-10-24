@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1f9d55">
+<title>Tuyển dụng</title>
+<link rel="manifest" href="app-trangchu.webmanifest">
+<link rel="icon" href="icon-tc-192.png">
+<!--
+  TRANG CHỦ — bản 3.36. Đặc tả: .scratch/trang-chu-goi-dau-3.36/DAC-TA.md
+
+  MỘT đường vào cho mọi việc. Đăng nhập một lần ở đây (chung vé với danh sách, phân công, quân số, dữ liệu tuyển).
+  Mở trang → MỘT lượt `goi_dau` lấy số của danh sách + phân công + quân số; bấm ô nào trong 2 phút là trang đó mở ra
+  có số ngay, không hỏi lại máy chủ (goi-dau.js). Ô Đăng ký và Đón luôn hiện, không cần đăng nhập.
+
+  KHÔNG có hẹn giờ tự gọi máy chủ: trần 40 lượt/phút là trần chung cả hệ. Chỉ lấy lại khi mở / quay lại trang
+  mà số đã quá 2 phút, hoặc khi bấm "Làm mới số".
+-->
+<style>
+  :root{
+    --nen:#f4f6f8; --the:#ffffff; --vien:#e6e9ed; --chu:#1f2933; --mo:#7b8794;
+    --xanh:#1f9d55; --xanh-nhat:#f2f9f4; --do-nhat:#fdecea; --xam-nut:#eef1f4;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--nen);color:var(--chu);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  .boc{max-width:560px;margin:0 auto;padding-bottom:26px}
+  .an{display:none !important}
+
+  .dinh{text-align:center;padding:20px 16px 8px}
+  .dinh b{font-size:17.5px}
+  .dinh .phu{font-size:13px;color:var(--mo);margin-top:3px}
+
+  .nut{display:block;width:calc(100% - 28px);margin:14px;padding:15px;border:0;border-radius:12px;
+    background:var(--xanh);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  .nut.phu{background:var(--xam-nut);color:#3c4753;padding:12px;font-size:15px;margin-top:10px}
+  .nut:disabled{opacity:.55}
+
+  .o{padding:0 16px}
+  .o input{width:100%;padding:13px 12px;font-size:16px;border:1px solid #d9dde2;
+    border-radius:10px;margin-top:6px;background:#fff}
+  .mk-o{position:relative}
+  .mk-o input{padding-right:70px}
+  .mk-o input::-ms-reveal{display:none}
+  .mk-hien{position:absolute;right:2px;top:6px;bottom:0;padding:0 14px;border:0;background:none;
+        font:inherit;font-size:14.5px;font-weight:600;color:#2d6cdf;cursor:pointer}
+  .nhan{font-size:13.5px;color:var(--mo);margin-top:14px}
+  .loi{margin:12px 16px 0;padding:10px 12px;border-radius:9px;background:var(--do-nhat);
+    color:#8a1c13;font-size:13.5px}
+  .mach{padding:4px 16px 18px;font-size:12.5px;color:var(--mo);line-height:1.55}
+  .ke{margin:18px 16px 4px;font-size:13px;color:var(--mo);font-weight:600}
+
+  /* Ô việc: hai cột trên điện thoại, chữ to bấm bằng ngón cái */
+  .luoi{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 14px 0}
+  .o-viec{display:flex;flex-direction:column;min-height:112px;padding:13px 12px;border-radius:14px;
+    background:var(--the);border:1px solid var(--vien);color:var(--chu);text-decoration:none}
+  .o-viec b{font-size:15.5px;line-height:1.3}
+  .o-viec .mt{font-size:12.5px;color:var(--mo);margin-top:3px;flex:1}
+  .o-viec .tt{font-size:12px;margin-top:8px;color:#1b7a43;font-weight:600}
+  .o-viec .tt.cu{color:var(--mo);font-weight:500}
+  .o-viec .tt.xau{color:#8a1c13;font-weight:500}
+  .o-viec.mo-cong{background:var(--xanh-nhat);border-color:#bfe0c9}
+
+  .do{margin:12px 14px 0;font-size:11.5px;color:var(--mo);text-align:center}
+</style>
+<!-- 3.32: mở trong Zalo thì nhắc mở bằng Chrome (thiếu tệp thì trang vẫn chạy như cũ) -->
+<script src="ngoai-zalo.js" defer></script>
+</head>
+<body>
+<div class="boc">
+
+<!-- ===== ĐĂNG NHẬP ===== -->
+<div id="man_dn">
+  <div class="dinh">
+    <b>TUYỂN DỤNG</b>
+    <div class="phu">Một chỗ vào mọi việc — đăng nhập một lần</div>
+  </div>
+  <div class="o">
+    <div class="nhan">Số căn cước của bạn (12 số)</div>
+    <input id="dn_cccd" inputmode="numeric" maxlength="12" autocomplete="username" placeholder="Ví dụ 024303008090">
+    <div class="nhan">Mật khẩu</div>
+    <div class="mk-o">
+      <input id="dn_mk" type="password" autocomplete="current-password" placeholder="Mật khẩu được cấp">
+      <button type="button" class="mk-hien" id="nut_hien_mk" aria-label="Hiện mật khẩu" aria-pressed="false">Hiện</button>
+    </div>
+  </div>
+  <div class="loi an" id="dn_loi"></div>
+  <button type="button" class="nut" id="nut_dn">Đăng nhập</button>
+  <div class="ke">Không cần đăng nhập</div>
+  <div class="luoi">
+    <a class="o-viec mo-cong" href="index.html"><b>Đăng ký lao động</b><span class="mt">Ghi người sẽ đến nhà máy</span></a>
+    <a class="o-viec mo-cong" href="doncong.html"><b>Quét thẻ đón</b><span class="mt">Đánh dấu người đã đến</span></a>
+  </div>
+  <div class="mach">
+    Danh sách gọi, phân công, quân số và dữ liệu tuyển cần đăng nhập — dùng đúng số căn cước và mật khẩu
+    như các trang đó.
+  </div>
+</div>
+
+<!-- ===== TRANG CHỦ ===== -->
+<div id="man_chu" class="an">
+  <div class="dinh">
+    <b>TUYỂN DỤNG</b>
+    <div class="phu" id="chu_ai">—</div>
+  </div>
+  <div class="loi an" id="chu_loi"></div>
+  <div class="luoi" id="chu_o"></div>
+  <button type="button" class="nut phu" id="nut_lam_moi">Làm mới số</button>
+  <button type="button" class="nut phu an" id="nut_cai">Thêm vào màn hình chính (mở nhanh, khỏi đăng nhập lại)</button>
+  <button type="button" class="nut phu" id="nut_thoat">Đăng xuất</button>
+  <div class="do an" id="thanh_do"></div>
+</div>
+
+</div>
+
+<script src="cau-hinh.js"></script>
+<script src="goi-may-chu.js"></script>
+<script src="goi-dau.js"></script>
+<script>
+// ====== CẤU HÌNH: URL_API + TOKEN_API nằm ở tệp cau-hinh.js, dùng chung cho mọi trang ======
+if (typeof URL_API === 'undefined' || typeof TOKEN_API === 'undefined' || !URL_API) {
+  window.URL_API = window.URL_API || '';
+  window.TOKEN_API = window.TOKEN_API || '';
+  document.body.insertAdjacentHTML('afterbegin', '<div style="background:#b71c1c;color:#fff;padding:14px;' +
+    'font-weight:bold;text-align:center">Trang chưa nối được máy chủ: không đọc được tệp cau-hinh.js ' +
+    '(chưa tải lên, mạng chập, hoặc chưa điền URL_API).<br>Tải lại trang. Vẫn thấy dòng này thì báo quản trị.</div>');
+}
+if (typeof goiMayChu_ !== 'function') {
+  document.body.insertAdjacentHTML('afterbegin', '<div style="background:#e65100;color:#fff;padding:10px;' +
+    'text-align:center">Thiếu tệp goi-may-chu.js — trang vẫn dùng được nhưng dễ báo lỗi mạng khi máy chủ chậm. ' +
+    'Báo quản trị.</div>');
+}
+// Thiếu goi-dau.js: trang chủ vẫn là chỗ bấm sang các trang, chỉ không cất được gói (trang con tự lấy như cũ).
+if (typeof layGoi_ !== 'function') {
+  document.body.insertAdjacentHTML('afterbegin', '<div style="background:#e65100;color:#fff;padding:10px;' +
+    'text-align:center">Thiếu tệp goi-dau.js — các ô vẫn bấm được nhưng trang nào cũng phải tự tải lại. Báo quản trị.</div>');
+  window.layGoi_ = function () { return null; };
+  window.luuGoi_ = function () {};
+  window.layMucGoi_ = function () { return null; };
+  window.xoaHetBanNho_ = function () {};
+  window.conTuoi_ = function () { return false; };
+  window.gioLuc_ = function () { return ''; };
+}
+// ==========================================================================================
+
+var $ = function (id) { return document.getElementById(id); };
+var KHOA_PHIEN = 'phien_ds_v3';   // CHUNG vé với 4 trang có đăng nhập
+
+function layPhien() { try { return localStorage.getItem(KHOA_PHIEN) || ''; } catch (e) { return ''; } }
+function datPhien(p) {
+  try { p ? localStorage.setItem(KHOA_PHIEN, p) : localStorage.removeItem(KHOA_PHIEN); } catch (e) {}
+}
+
+/** Mọi lượt gọi tự kèm vé. Vé hết / bị thu hồi → xoá vé + MỌI số đã lưu trong máy, về màn đăng nhập. */
+function goiAPI(body, tuy) {
+  var b = body || {};
+  if (!b.phien) b.phien = layPhien();
+  var goi = typeof goiMayChu_ === 'function' ? goiMayChu_(b, tuy)
+    : fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                       body: JSON.stringify(b) }).then(function (r) { return r.json(); });
+  return goi.then(function (kq) {
+    if (kq && kq.ma === 'HET_PHIEN') {
+      xoaHetBanNho_();
+      datPhien('');
+      veManDangNhap('Phiên đăng nhập đã hết. Xin đăng nhập lại.');
+    }
+    return kq;
+  });
+}
+
+function thoat(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function cauLoi(e) { return (e && e.message) || 'Không nối được máy chủ. Kiểm tra mạng rồi thử lại.'; }
+function hien(el) {
+  ['man_dn', 'man_chu'].forEach(function (i) { $(i).classList.add('an'); });
+  $(el).classList.remove('an');
+}
+
+// ============================================================
+// Ô VIỆC
+// ============================================================
+// `can`: '' = ai cũng vào được · 'phan_cong' = trưởng nhóm / quản trị · 'du_lieu_tuyen' = đã khai ten_tuyen.
+// `muc`: phần nào trong gói đầu thuộc ô này (để ghi "số lúc …").
+var O_VIEC = [
+  { ten: 'Danh sách gọi', mt: 'Gọi lao động · báo vào làm · lấy dữ liệu', href: 'danhsach.html', can: 'dang_nhap', muc: 'danh_sach' },
+  { ten: 'Phân công đón', mt: 'Ai phụ trách nhà máy nào', href: 'phancong.html', can: 'phan_cong', muc: 'phan_cong' },
+  { ten: 'Báo quân số', mt: 'Số người đi làm từng công ty', href: 'quanso.html', can: 'dang_nhap', muc: 'quan_so' },
+  { ten: 'Dữ liệu tuyển', mt: 'Người mình đã tuyển · đăng ký lại', href: 'dulieutuyen.html', can: 'du_lieu_tuyen', muc: '' },
+  { ten: 'Đăng ký lao động', mt: 'Không cần đăng nhập', href: 'index.html', can: '', muc: '' },
+  { ten: 'Quét thẻ đón', mt: 'Không cần đăng nhập', href: 'doncong.html', can: '', muc: '' }
+];
+
+/** Ô nào hiện. `tk` null = chưa biết quyền (máy chủ chưa trả lời) → hiện hết, trang con tự kiểm quyền.
+ *  `xemDlt` undefined = máy chủ cũ không nói → hiện, trang dữ liệu tuyển tự từ chối nếu chưa được duyệt. */
+function oDuocXem(tk, xemDlt) {
+  return O_VIEC.filter(function (o) {
+    if (!o.can || !tk) return true;
+    if (o.can === 'phan_cong') return !!tk.phan_cong_duoc;
+    if (o.can === 'du_lieu_tuyen') return xemDlt !== false;
+    return true;
+  });
+}
+
+var tkTam = null;        // tài khoản khi CHƯA có gói (máy chủ cũ, hoặc đăng nhập mà gói đọc hỏng)
+var dangLay = false;     // đang có một lượt goi_dau trên đường
+var loiGoi = '';         // lượt lấy gói gần nhất hỏng vì sao
+var mayChuCu = false;    // máy chủ chưa có goi_dau → không tự lấy lại khi quay lại trang
+
+/** Dòng trạng thái dưới một ô có số. */
+function chuTrangThai(o, v) {
+  if (!o.muc) return o.href === 'dulieutuyen.html' ? { t: 'Mở ra là tải', k: 'cu' } : null;
+  var p = layPhien();
+  var m = v ? layMucGoi_(p, o.muc, o.muc === 'danh_sach' && v.goi.ngay ? v.goi.ngay.ngay_mai : '') : null;
+  var r;
+  if (m) r = conTuoi_(m.luc) ? { t: 'Số lúc ' + gioLuc_(m.luc), k: '' } : { t: 'Số lúc ' + gioLuc_(m.luc) + ' (cũ)', k: 'cu' };
+  else if (v && (o.muc in v.goi.muc)) r = { t: 'Chưa lấy được — mở trang sẽ tự lấy', k: 'xau' };
+  else r = { t: dangLay ? '' : 'Mở trang để lấy số', k: 'cu' };
+  if (dangLay) r = { t: (r.t ? r.t + ' · ' : '') + 'đang lấy số mới…', k: 'cu' };
+  return r;
+}
+
+/** Vẽ trang chủ từ thứ đang có trong máy: gói của vé này (tươi hay cũ), không thì tài khoản tạm. */
+function veChu() {
+  var v = layGoi_(layPhien());
+  var tk = v ? v.goi.tai_khoan : tkTam;
+  var xemDlt = v ? v.goi.xem_du_lieu_tuyen : undefined;
+  $('chu_ai').textContent = tk ? (tk.ten_nguoi || '') + (tk.ten_chuc_vu ? ' · ' + tk.ten_chuc_vu : '')
+                               : (dangLay ? 'Đang vào…' : '—');
+  $('chu_o').innerHTML = oDuocXem(tk, xemDlt).map(function (o) {
+    var tt = chuTrangThai(o, v);
+    return '<a class="o-viec' + (o.can ? '' : ' mo-cong') + '" href="' + o.href + '"><b>' + thoat(o.ten) + '</b>' +
+           '<span class="mt">' + thoat(o.mt) + '</span>' +
+           (tt && tt.t ? '<span class="tt' + (tt.k ? ' ' + tt.k : '') + '">' + thoat(tt.t) + '</span>' : '') + '</a>';
+  }).join('');
+  if (loiGoi) { $('chu_loi').textContent = loiGoi + ' Các ô vẫn bấm được — trang nào mở ra sẽ tự lấy.'; $('chu_loi').classList.remove('an'); }
+  else $('chu_loi').classList.add('an');
+  $('nut_lam_moi').disabled = dangLay;
+  hien('man_chu');
+}
+
+/** Thanh đo (như trang quân số): ai kêu chậm chụp màn là biết chậm ở mạng hay ở máy chủ, ở mục nào. */
+function hienDo(msTrang, _do) {
+  var ten = { danh_sach: 'danh sách', phan_cong: 'phân công', quan_so: 'quân số' };
+  var cac = Object.keys(_do || {}).map(function (k) { return (ten[k] || k) + ' ' + _do[k] + 'ms'; });
+  $('thanh_do').textContent = 'Trang chờ ' + (msTrang / 1000).toFixed(1).replace('.', ',') + ' giây' +
+    (cac.length ? ' · máy chủ: ' + cac.join(' · ') : '');
+  $('thanh_do').classList.remove('an');
+}
+
+/** MỘT lượt goi_dau. Đang có lượt trên đường thì thôi — bấm hay quay lại liên tục không nhân lượt. */
+function layGoiMoi() {
+  if (dangLay) return;
+  var p = layPhien();
+  if (!p) return;
+  dangLay = true; loiGoi = '';
+  veChu();
+  var t0 = Date.now();
+  goiAPI({ token: TOKEN_API, hanh_dong: 'goi_dau' })
+    .then(function (kq) {
+      if (!kq || kq.ma === 'HET_PHIEN') return;
+      // Đăng xuất / đổi tài khoản trong lúc chờ → bỏ gói này, không cất số của người cũ lại vào máy.
+      if (kq.ok) { if (layPhien() === p) { luuGoi_(p, kq); hienDo(Date.now() - t0, kq._do); } return; }
+      if (kq.ma === 'SAI_HANH_DONG') { mayChuCu = true; return layKieuCu(); }
+      loiGoi = kq.loi || 'Máy chủ chưa trả lời được.';
+    }, function (e) { loiGoi = cauLoi(e); })
+    .then(function () {
+      dangLay = false;
+      if (layPhien()) veChu();
+    });
+}
+
+/** Máy chủ cũ (chưa có goi_dau): chỉ cần biết quyền để dựng ô; số thì trang con tự lấy như trước. */
+function layKieuCu() {
+  return goiAPI({ token: TOKEN_API, hanh_dong: 'cong_ty_cua_toi' }).then(function (kq) {
+    if (kq && kq.ok) tkTam = kq;
+    else if (kq && kq.ma !== 'HET_PHIEN') loiGoi = kq.loi || 'Máy chủ chưa trả lời được.';
+  }, function (e) { loiGoi = cauLoi(e); });
+}
+
+// ============================================================
+// ĐĂNG NHẬP
+// ============================================================
+function veManDangNhap(loi) {
+  tkTam = null; loiGoi = '';
+  if (loi) { $('dn_loi').textContent = loi; $('dn_loi').classList.remove('an'); }
+  else { $('dn_loi').classList.add('an'); }
+  $('dn_mk').value = '';
+  hienMatKhau(false);   // máy hay dùng chung — quay lại màn đăng nhập thì ẩn mật khẩu
+  $('thanh_do').classList.add('an');
+  hien('man_dn');
+}
+function baoLoi(t) { $('dn_loi').textContent = t; $('dn_loi').classList.remove('an'); }
+
+// Đăng nhập tay cũng chỉ MỘT lượt: máy chủ trả kèm gói (cờ `goi`). Máy chủ cũ bỏ qua cờ → vẫn vào được, ô theo quyền.
+$('nut_dn').addEventListener('click', function () {
+  var cccd = ($('dn_cccd').value || '').replace(/\D/g, '');
+  var mk = $('dn_mk').value || '';
+  if (cccd.length !== 12) { baoLoi('Số căn cước phải đủ 12 chữ số.'); return; }
+  if (!mk) { baoLoi('Chưa nhập mật khẩu.'); return; }
+  var n = this; n.disabled = true; n.textContent = 'Đang kiểm tra…';
+  $('dn_loi').classList.add('an');
+  var t0 = Date.now();
+  goiAPI({ token: TOKEN_API, hanh_dong: 'dang_nhap', so_cccd: cccd, mat_khau: mk, goi: true, phien: '-' })
+    .then(function (kq) {
+      if (!(kq && kq.ok)) { baoLoi((kq && kq.loi) || 'Không đăng nhập được.'); return; }
+      xoaHetBanNho_();             // máy dùng chung: không để sót số của tài khoản đăng nhập trước
+      datPhien(kq.phien);
+      tkTam = kq; loiGoi = '';
+      if (kq.goi && kq.goi.ok) { luuGoi_(kq.phien, kq.goi); hienDo(Date.now() - t0, kq.goi._do); }
+      veChu();
+    }, function (e) { baoLoi(cauLoi(e)); })
+    .then(function () { n.disabled = false; n.textContent = 'Đăng nhập'; });
+});
+$('dn_mk').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('nut_dn').click(); });
+
+function hienMatKhau(bat) {
+  $('dn_mk').type = bat ? 'text' : 'password';
+  var nut = $('nut_hien_mk');
+  nut.textContent = bat ? 'Ẩn' : 'Hiện';
+  nut.setAttribute('aria-pressed', bat);
+  nut.setAttribute('aria-label', bat ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+}
+$('nut_hien_mk').addEventListener('click', function () { hienMatKhau($('dn_mk').type === 'password'); });
+
+$('nut_thoat').addEventListener('click', function () {
+  if (!confirm('Đăng xuất khỏi máy này? Số đã lưu trong máy cũng bị xoá.')) return;
+  xoaHetBanNho_();
+  datPhien('');
+  veManDangNhap('');
+});
+$('nut_lam_moi').addEventListener('click', function () { layGoiMoi(); });
+
+// ============================================================
+// MỞ TRANG · QUAY LẠI TRANG
+// ============================================================
+/** Có vé: bày NGAY thứ đang có (gói tươi / gói cũ / ô chưa biết quyền), rồi chỉ lấy gói khi chưa có hoặc đã cũ. */
+function khoiDong() {
+  var p = layPhien();
+  if (!p) { veManDangNhap(''); return; }
+  veChu();
+  var v = layGoi_(p);
+  if (!v || !conTuoi_(v.luc)) layGoiMoi();
+}
+
+/** Quay lại từ trang con (nút Back) hoặc từ Zalo: vẽ lại từ máy (trang con có thể đã bỏ bớt mục sau khi ghi),
+ *  số quá 2 phút thì lấy lại MỘT lượt. Máy chủ cũ → không tự lấy, bấm "Làm mới số" nếu cần. */
+function khiQuayLai() {
+  if (!layPhien() || $('man_chu').classList.contains('an')) return;
+  veChu();
+  var v = layGoi_(layPhien());
+  if (!mayChuCu && (!v || !conTuoi_(v.luc))) layGoiMoi();
+}
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') khiQuayLai(); });
+window.addEventListener('pageshow', function (e) { if (e.persisted) khiQuayLai(); });
+
+// Cài như ứng dụng: Chrome Android báo "cài được" thì mới hiện nút; iPhone cài bằng tay: Chia sẻ → Thêm vào MH chính.
+var loiMoiCai = null;
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  loiMoiCai = e;
+  $('nut_cai').classList.remove('an');
+});
+$('nut_cai').addEventListener('click', function () {
+  if (!loiMoiCai) return;
+  loiMoiCai.prompt();
+  loiMoiCai.userChoice.then(function () { loiMoiCai = null; $('nut_cai').classList.add('an'); });
+});
+// Giữ sẵn mã trang trong máy (service worker dùng chung với trang danh sách — xem sw-danhsach.js).
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw-danhsach.js').catch(function () {});
+}
+
+// Gọi SAU khi cả khối chạy xong — biến khai phía dưới lời gọi chưa được gán (bài học 3.32).
+Promise.resolve().then(khoiDong);
+</script>
+</body>
+</html>

@@ -61,8 +61,19 @@
 
   .o{padding:0 16px}
   .o input{width:100%;padding:13px 12px;font-size:16px;border:1px solid #d9dde2;border-radius:10px;margin-top:6px;background:#fff}
+  /* Nút Hiện/Ẩn mật khẩu nằm trong ô — gõ trên điện thoại hay sai một chữ mà không biết sai đâu */
+  .mk-o{position:relative}
+  .mk-o input{padding-right:70px}
+  .mk-o input::-ms-reveal{display:none}
+  .mk-hien{position:absolute;right:2px;top:6px;bottom:0;padding:0 14px;border:0;background:none;
+        font:inherit;font-size:14.5px;font-weight:600;color:#2d6cdf;cursor:pointer}
   .nhan{font-size:13.5px;color:var(--mo);margin-top:14px}
   .loi{margin:12px 14px 0;padding:10px 12px;border-radius:9px;background:var(--do-nhat);color:#8a1c13;font-size:13.5px;white-space:pre-line}
+  /* 3.36: link về trang chủ · danh sách cũ đang chờ bản mới thì mờ · nút trong dải "có thể đã có số mới" */
+  .ve-chu{display:inline-block;margin:10px 0 0 14px;font-size:13.5px;color:#2d6cdf;text-decoration:none}
+  .cu-mo{opacity:.55}
+  .nhac button{margin-left:6px;padding:4px 10px;border:1px solid #e0c98a;border-radius:7px;background:#fff;
+    font:inherit;font-weight:600;cursor:pointer}
   .nhac{margin:10px 14px 0;padding:10px 12px;border-radius:10px;background:var(--vang-nhat);border:1px solid var(--vang-vien);
     color:#6b4e00;font-size:13px;line-height:1.55;white-space:pre-line}
   .tin-tuc{margin:10px 14px 0;padding:10px 12px;border-radius:10px;background:var(--lam-nhat);border:1px solid #c9dbf5;
@@ -183,6 +194,8 @@
   .ngay-th .mo-rong{margin-top:8px;border-top:1px dashed var(--vien);padding-top:8px;cursor:default}
   h4.ca{margin:16px 14px 0;font-size:15px}
 </style>
+<!-- 3.32: mở trong Zalo thì nhắc mở bằng Chrome (thiếu tệp thì trang vẫn chạy như cũ) -->
+<script src="ngoai-zalo.js" defer></script>
 </head>
 <body>
 
@@ -209,7 +222,10 @@
     <div class="nhan">Số căn cước của bạn (12 số)</div>
     <input id="dn_cccd" inputmode="numeric" maxlength="12" autocomplete="username" placeholder="Ví dụ 024303008090">
     <div class="nhan">Mật khẩu</div>
-    <input id="dn_mk" type="password" autocomplete="current-password" placeholder="Mật khẩu được cấp">
+    <div class="mk-o">
+      <input id="dn_mk" type="password" autocomplete="current-password" placeholder="Mật khẩu được cấp">
+      <button type="button" class="mk-hien" id="nut_hien_mk" aria-label="Hiện mật khẩu" aria-pressed="false">Hiện</button>
+    </div>
   </div>
   <div class="loi an" id="dn_loi"></div>
   <button type="button" class="nut" id="nut_dn">Đăng nhập</button>
@@ -222,10 +238,13 @@
 
 <!-- ===== DANH SÁCH ĐƠN VỊ ===== -->
 <div id="man_ds" class="an">
+  <a class="ve-chu" href="trangchu.html">⌂ Trang chủ</a>
   <div class="dinh">
     <b>BÁO QUÂN SỐ</b>
     <div class="phu" id="ds_tom">—</div>
   </div>
+  <div class="nhac an" id="dai_moi">Danh sách đã hơn 2 phút, có thể đã có người báo thêm. Lượt bạn đang báo dở
+    vẫn giữ nguyên.<button type="button" id="nut_lam_moi_qs">Làm mới</button></div>
   <div class="the-tab">
     <button type="button" class="dang" id="tab_bao">Báo quân số</button>
     <button type="button" id="tab_th">Tổng hợp</button>
@@ -328,6 +347,8 @@
 
 <script src="cau-hinh.js"></script>
 <script src="goi-may-chu.js"></script>
+<!-- 3.36: gói đầu của trang chủ + bản nhớ danh sách đơn vị. Thiếu tệp thì trang chạy y như 3.35. -->
+<script src="goi-dau.js"></script>
 <script>
 // ====== CẤU HÌNH: URL_API + TOKEN_API nằm ở tệp cau-hinh.js, dùng chung cho mọi trang ======
 if (typeof URL_API === 'undefined' || typeof TOKEN_API === 'undefined' || !URL_API) {
@@ -391,17 +412,23 @@ function hienDo(nhan, tTrangMs, kq) {
 function goiAPI(body, choMsg) {
   var b = body || {};
   if (!b.phien) b.phien = layPhien();
-  moChe(choMsg);
+  // 3.36: choMsg === false → lấy NGẦM, không phủ lớp "đang tải" lên danh sách cũ người ta đang xem.
+  var che = choMsg !== false;
+  if (che) moChe(choMsg);
   var goi = typeof goiMayChu_ === 'function' ? goiMayChu_(b)
     : fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                        body: JSON.stringify(b) }).then(function (r) { return r.json(); });
   return goi
     .then(function (kq) {
-      dongChe();
-      if (kq && kq.ma === 'HET_PHIEN') { datPhien(''); veManDangNhap('Phiên đăng nhập đã hết. Xin đăng nhập lại — phần đã lưu nháp vẫn còn.'); }
+      if (che) dongChe();
+      if (kq && kq.ma === 'HET_PHIEN') {
+        dangXemTruoc = false;
+        if (typeof xoaHetBanNho_ === 'function') xoaHetBanNho_();   // gói trang chủ + bản nhớ đơn vị (nháp nằm ở máy chủ)
+        datPhien(''); veManDangNhap('Phiên đăng nhập đã hết. Xin đăng nhập lại — phần đã lưu nháp vẫn còn.');
+      }
       return kq;
     })
-    .catch(function (e) { dongChe(); throw e; });
+    .catch(function (e) { if (che) dongChe(); throw e; });
 }
 
 function thoat(s) {
@@ -435,6 +462,7 @@ function veManDangNhap(loi) {
   if (loi) { $('dn_loi').textContent = loi; $('dn_loi').classList.remove('an'); }
   else { $('dn_loi').classList.add('an'); }
   $('dn_mk').value = '';
+  hienMatKhau(false);   // máy hay dùng chung — quay lại màn đăng nhập thì ẩn mật khẩu
   hien('man_dn');
 }
 
@@ -449,7 +477,11 @@ $('nut_dn').addEventListener('click', function () {
   $('dn_loi').classList.add('an');
   goiAPI({ token: TOKEN_API, hanh_dong: 'dang_nhap', so_cccd: cccd, mat_khau: mk, phien: '-' })
     .then(function (kq) {
-      if (kq && kq.ok) { datPhien(kq.phien); vaoTrong(kq); return; }
+      if (kq && kq.ok) {
+        // 3.36: máy dùng chung — số lưu trong máy (gói trang chủ, bản nhớ) có thể của tài khoản trước
+        if (typeof xoaHetBanNho_ === 'function') xoaHetBanNho_();
+        datPhien(kq.phien); vaoTrong(kq); return;
+      }
       baoLoiDN((kq && kq.loi) || 'Không đăng nhập được.');
     })
     .catch(function (e) { baoLoiDN(cauLoi(e) + ' Kiểm tra mạng rồi thử lại.'); })
@@ -458,32 +490,97 @@ $('nut_dn').addEventListener('click', function () {
 function baoLoiDN(t) { $('dn_loi').textContent = t; $('dn_loi').classList.remove('an'); }
 $('dn_mk').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('nut_dn').click(); });
 
+// Nút Hiện/Ẩn mật khẩu (21/10/2026)
+function hienMatKhau(bat) {
+  $('dn_mk').type = bat ? 'text' : 'password';
+  var nut = $('nut_hien_mk');
+  nut.textContent = bat ? 'Ẩn' : 'Hiện';
+  nut.setAttribute('aria-pressed', bat);
+  nut.setAttribute('aria-label', bat ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+}
+$('nut_hien_mk').addEventListener('click', function () { hienMatKhau($('dn_mk').type === 'password'); });
+
 $('nut_thoat').addEventListener('click', function () {
   if (luot && !confirm('Lượt báo đang dở chưa gửi. Đăng xuất thì phần chưa lưu nháp sẽ mất. Vẫn đăng xuất?')) return;
   if (!luot && !confirm('Đăng xuất khỏi máy này?')) return;
   luot = null;
+  if (typeof xoaHetBanNho_ === 'function') xoaHetBanNho_();   // 3.36
   datPhien('');
   veManDangNhap('');
 });
 
-/** Mở trang: còn vé thì vào thẳng. Trục trặc thoáng qua KHÔNG đá về đăng nhập — vé còn hạn thì giữ. */
+/** Mở trang: còn vé thì vào thẳng. Trục trặc thoáng qua KHÔNG đá về đăng nhập — vé còn hạn thì giữ.
+ *  Bản 3.36: (1) gói trang chủ còn tươi (≤ 2 phút, đúng vé, đúng hôm nay) → vào thẳng, KHÔNG gọi máy chủ.
+ *  (2) Không có gói: kiểm vé VÀ lấy đơn vị hôm nay CÙNG LÚC — trước đây nối đuôi, chờ hai lượt (~7 giây);
+ *  danh sách vẫn chỉ được vẽ sau khi vé được xác nhận (moNgay dùng lại cú lấy sẵn). (3) Có danh sách lần trước
+ *  thì bày ngay, mờ, chưa cho bắt đầu báo, và lấy ngầm không phủ lớp "đang tải". */
+var dsLayTruoc = null;     // { ngay, p, t0 } — cú qs_don_vi bắn sẵn lúc mở trang
+var dangXemTruoc = false;
 function khoiDong() {
   if (!layPhien()) { veManDangNhap(''); return; }
+  if (goiTuoi(homNay)) { vaoTrong(); return; }
   var nut = $('nut_dn');
   nut.disabled = true; nut.textContent = 'Đang vào…';
-  goiAPI({ token: TOKEN_API, hanh_dong: 'cong_ty_cua_toi' })
+  var cu = veConHan(layPhien()) ? soCu(homNay) : null;
+  if (cu) xemTruoc(cu);
+  dsLayTruoc = { ngay: homNay, t0: Date.now(),
+                 p: goiAPI({ token: TOKEN_API, hanh_dong: 'qs_don_vi', ngay: homNay }, cu ? false : 'Đang tải danh sách công ty…') };
+  dsLayTruoc.p.catch(function () {});   // lỗi của cú lấy sẵn do moNgay báo; đừng để lọt ra ngoài
+  goiAPI({ token: TOKEN_API, hanh_dong: 'cong_ty_cua_toi' }, cu ? false : undefined)
     .then(function (kq) {
-      if (kq && kq.ok) { vaoTrong(kq); return; }
+      if (kq && kq.ok) { dangXemTruoc = false; vaoTrong(kq); return; }
+      dsLayTruoc = null;
       if (kq && kq.ma === 'HET_PHIEN') return;
       baoLoiVao((kq && kq.loi) || 'Máy chủ chưa trả lời được.');
-    }, function (e) { baoLoiVao(cauLoi(e)); })
+    }, function (e) { dsLayTruoc = null; baoLoiVao(cauLoi(e)); })
     .then(function () { nut.disabled = false; nut.textContent = 'Đăng nhập'; });
 }
+/** Đang bày danh sách lần trước (3.36) thì GIỮ trên màn hình, chỉ báo lỗi + Thử lại ở ô lỗi của danh sách. */
 function baoLoiVao(cau) {
-  $('dn_loi').innerHTML = thoat(cau) + ' Phiên đăng nhập vẫn còn — <a href="#" id="thu_lai_vao">Thử lại</a>';
-  $('dn_loi').classList.remove('an');
+  var o = dangXemTruoc ? $('ds_loi') : $('dn_loi');
+  o.innerHTML = (dangXemTruoc ? 'Chưa xác nhận được đăng nhập: ' : '') + thoat(cau) +
+    (dangXemTruoc ? ' Đang xem danh sách lúc ' + thoat(gioXemTruoc()) + ', chưa báo được — '
+                  : ' Phiên đăng nhập vẫn còn — ') + '<a href="#" id="thu_lai_vao">Thử lại</a>';
+  o.classList.remove('an');
   $('thu_lai_vao').addEventListener('click', function (e) { e.preventDefault(); khoiDong(); });
-  hien('man_dn');
+  if (!dangXemTruoc) hien('man_dn');
+}
+
+/* ---------- Gói đầu của trang chủ + bản nhớ đơn vị (bản 3.36, goi-dau.js) ----------
+ * Bản nhớ CHỈ giữ danh sách đơn vị (qs_don_vi: công ty, ca, đã báo / chưa, người báo) — KHÔNG BAO GIỜ giữ tên,
+ * SĐT người mới (qs_mo): luật 3.28 "không cất người mới vào trình duyệt" vẫn nguyên. Thiếu goi-dau.js → như 3.35. */
+function goiTuoi(ngay) {
+  if (typeof layMucGoi_ !== 'function') return null;
+  var m = layMucGoi_(layPhien(), 'quan_so');
+  return (m && m.kq.ngay === ngay && conTuoi_(m.luc)) ? m : null;
+}
+function soCu(ngay) {
+  if (typeof layBanNho_ !== 'function') return null;
+  var p = layPhien(), nho = layBanNho_(KHOA_NHO_QUAN_SO, p, ngay), g = layMucGoi_(p, 'quan_so');
+  g = (g && g.kq.ngay === ngay) ? { ngay: ngay, luc: g.luc, kq: g.kq } : null;
+  return moiHon_(nho, g);
+}
+function gioXemTruoc() { var cu = soCu(ngayBao || homNay); return cu ? gioLuc_(cu.luc) : ''; }
+function xemTruoc(cu) {
+  dangXemTruoc = true;
+  hien('man_ds');
+  apDonVi(cu.kq, cu.ngay);
+  $('ds_noi').classList.add('cu-mo');
+  $('nut_bat_dau').disabled = true;
+  $('ds_tom').textContent = 'Danh sách lúc ' + gioLuc_(cu.luc) + ' — đang xác nhận đăng nhập…';
+}
+/** 3.36 chốt 2: sắp lưu nháp / chốt → số đơn vị trong máy (đã báo, có nháp) thành cũ ngay sau lượt này. */
+function boSoQuanSo() {
+  if (typeof boMucGoi_ === 'function') boMucGoi_('quan_so');
+  if (typeof xoaBanNho_ === 'function') xoaBanNho_(KHOA_NHO_QUAN_SO);
+}
+/** Vé còn hạn theo đồng hồ MÁY? Chỉ để quyết định có bày danh sách lần trước không (giống danhsach.html). */
+function veConHan(phien) {
+  try {
+    var s = String(phien || '').split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return Number(atob(s).split('|')[1]) > new Date().getTime();
+  } catch (e) { return false; }
 }
 
 // ============================================================
@@ -500,38 +597,80 @@ function moNgay(ngay) {
   $('ds_ngay').value = ngay;
   $('ds_ngay').max = homNay;
   $('ng_toi').disabled = ngay >= homNay;
-  $('ds_tom').textContent = 'Đang tải…';
-  $('ds_noi').innerHTML = '';
   $('ds_loi').classList.add('an');
-  $('ds_thanh').classList.add('an');
+  $('dai_moi').classList.add('an');
   hien('man_ds');
-  var _doT0 = Date.now();
-  goiAPI({ token: TOKEN_API, hanh_dong: 'qs_don_vi', ngay: ngay }, 'Đang tải danh sách công ty…')
+  // 3.36: gói trang chủ còn tươi → vẽ luôn, không gọi. Không thì bày danh sách lần trước (mờ) trong lúc chờ.
+  var tuGoi = goiTuoi(ngay);
+  var cu = tuGoi ? null : soCu(ngay);
+  dangTaiQS = true;   // trước khi vẽ bản cũ: thanh dưới đọc cờ này để khoá nút "Bắt đầu báo"
+  if (cu) {
+    apDonVi(cu.kq, ngay);
+    $('ds_noi').classList.add('cu-mo');
+    $('ds_tom').textContent = 'Danh sách lúc ' + gioLuc_(cu.luc) + ' — đang lấy bản mới…';
+  } else if (!tuGoi) {
+    $('ds_tom').textContent = 'Đang tải…';
+    $('ds_noi').innerHTML = '';
+    $('ds_thanh').classList.add('an');
+  }
+  var laySan = !tuGoi && dsLayTruoc && dsLayTruoc.ngay === ngay;
+  var _doT0 = laySan ? dsLayTruoc.t0 : Date.now();
+  // Mở trang lần đầu thì đơn vị hôm nay đã được bắn sẵn cùng cú kiểm vé (khoiDong) — dùng đúng một lần.
+  var p = tuGoi ? Promise.resolve(tuGoi.kq)
+        : laySan ? dsLayTruoc.p
+        : goiAPI({ token: TOKEN_API, hanh_dong: 'qs_don_vi', ngay: ngay }, cu ? false : 'Đang tải danh sách công ty…');
+  dsLayTruoc = null;
+  p
     .then(function (kq) {
       if (!kq) return;
-      hienDo('danh sách công ty', Date.now() - _doT0, kq);
+      if (!tuGoi) hienDo('danh sách công ty', Date.now() - _doT0, kq);
       if (!kq.ok) { $('ds_tom').textContent = 'Ngày ' + ngayVN(ngay); hienLoi('ds_loi', kq.loi || 'Không lấy được danh sách.'); return; }
-      homNay = kq.hom_nay || homNay;
-      $('ds_ngay').max = homNay;
-      $('ng_toi').disabled = ngay >= homNay;
-      dsDonVi = kq.don_vi || [];
-      nhomNhan = kq.nhom_nhan || { ok: true };
-      // Giữ chọn của lượt đang dở; không thì mặc định chọn đơn vị CHƯA BÁO
-      chon = {};
-      dsDonVi.forEach(function (d) {
-        if (luot) { if (luot.dv.some(function (u) { return u.khoa === d.khoa; })) chon[d.khoa] = true; }
-        else if (!d.hien_hanh) chon[d.khoa] = true;
-      });
-      $('ds_tom').textContent = (kq.ten_nguoi || '') + ' · ngày ' + (kq.ngay_hien_thi || ngayVN(ngay)) +
-        (ngay === homNay ? ' (hôm nay)' : '') + ' · ' + dsDonVi.length + ' đơn vị';
-      var nhac = [];
-      if (!nhomNhan.ok) nhac.push('⛔ ' + nhomNhan.loi);
-      if (kq.canh_bao_ca) nhac.push('⚠️ ' + kq.canh_bao_ca);
-      if (nhac.length) hienLoi('ds_loi', nhac.join('\n'));
-      veDanhSach();
+      apDonVi(kq, ngay);
+      $('ds_noi').classList.remove('cu-mo');
+      lucSoQS = tuGoi ? tuGoi.luc : new Date().getTime();
+      if (tuGoi) $('ds_tom').textContent += ' · số lúc ' + gioLuc_(tuGoi.luc);   // chốt 1: số từ gói luôn ghi giờ
+      else if (typeof luuBanNho_ === 'function') luuBanNho_(KHOA_NHO_QUAN_SO, layPhien(), ngay, kq, null);
     })
-    .catch(function (e) { $('ds_tom').textContent = 'Ngày ' + ngayVN(ngay); hienLoi('ds_loi', cauLoi(e) + ' Bấm "Hôm nay" hoặc đổi ngày để thử lại.'); });
+    .catch(function (e) { $('ds_tom').textContent = 'Ngày ' + ngayVN(ngay); hienLoi('ds_loi', cauLoi(e) + ' Bấm "Hôm nay" hoặc đổi ngày để thử lại.'); })
+    .then(function () { dangTaiQS = false; capNhatThanhDS(); });
 }
+var lucSoQS = 0;       // 3.36: mốc của danh sách đang trên màn hình — quay lại trang quá 2 phút thì lấy lại
+var dangTaiQS = false;
+
+/** Dựng trạng thái + vẽ danh sách đơn vị từ một kết quả qs_don_vi (bản mới, gói hay bản nhớ). */
+function apDonVi(kq, ngay) {
+  homNay = kq.hom_nay || homNay;
+  $('ds_ngay').max = homNay;
+  $('ng_toi').disabled = ngay >= homNay;
+  dsDonVi = kq.don_vi || [];
+  nhomNhan = kq.nhom_nhan || { ok: true };
+  // Giữ chọn của lượt đang dở; không thì mặc định chọn đơn vị CHƯA BÁO
+  chon = {};
+  dsDonVi.forEach(function (d) {
+    if (luot) { if (luot.dv.some(function (u) { return u.khoa === d.khoa; })) chon[d.khoa] = true; }
+    else if (!d.hien_hanh) chon[d.khoa] = true;
+  });
+  $('ds_tom').textContent = (kq.ten_nguoi || '') + ' · ngày ' + (kq.ngay_hien_thi || ngayVN(ngay)) +
+    (ngay === homNay ? ' (hôm nay)' : '') + ' · ' + dsDonVi.length + ' đơn vị';
+  var nhac = [];
+  if (!nhomNhan.ok) nhac.push('⛔ ' + nhomNhan.loi);
+  if (kq.canh_bao_ca) nhac.push('⚠️ ' + kq.canh_bao_ca);
+  if (nhac.length) hienLoi('ds_loi', nhac.join('\n'));
+  veDanhSach();
+}
+
+/* 3.36 — LÀM MỚI NGẦM: quay lại trang mà danh sách đã quá 2 phút thì lấy lại MỘT lượt. Đang có lượt báo dở thì
+ * KHÔNG vẽ đè — chỉ hiện dải "Làm mới". Không có hẹn giờ nào: trần 40 lượt/phút là trần chung cả hệ. */
+function khiQuayLai() {
+  if ($('man_ds').classList.contains('an') || dangXemTruoc || dangTaiQS || !lucSoQS) return;
+  var tuoi = typeof conTuoi_ === 'function' ? conTuoi_(lucSoQS) : (new Date().getTime() - lucSoQS < 120000);
+  if (tuoi) return;
+  if (luot) { $('dai_moi').classList.remove('an'); return; }
+  moNgay(ngayBao);
+}
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') khiQuayLai(); });
+window.addEventListener('pageshow', function (e) { if (e.persisted) khiQuayLai(); });
+$('nut_lam_moi_qs').addEventListener('click', function () { moNgay(ngayBao); });
 function hienLoi(id, t) { $(id).textContent = t; $(id).classList.remove('an'); }
 
 $('ds_ngay').addEventListener('change', function () { if (this.value) moNgay(this.value > homNay ? homNay : this.value); });
@@ -573,7 +712,7 @@ function capNhatThanhDS() {
   var n = Object.keys(chon).length;
   $('ds_thanh').classList.toggle('an', !dsDonVi.length);
   $('ds_tt').textContent = n ? 'Đã chọn ' + n + ' đơn vị cho lượt này — không bắt buộc chọn hết.' : 'Bấm vào đơn vị để chọn báo trong lượt này.';
-  $('nut_bat_dau').disabled = !n;
+  $('nut_bat_dau').disabled = !n || dangXemTruoc || dangTaiQS;   // 3.36: danh sách cũ đang chờ bản mới → chưa bắt đầu
   $('nut_bat_dau').textContent = luot ? 'Tiếp tục lượt đang dở (' + luot.dv.length + ' đơn vị)'
     : (n ? 'Bắt đầu báo ' + n + ' đơn vị' : 'Chọn đơn vị để báo');
 }
@@ -582,6 +721,7 @@ function capNhatThanhDS() {
 // MỞ LƯỢT: lấy bối cảnh MỌI đơn vị đã chọn trong MỘT cú gọi
 // ============================================================
 $('nut_bat_dau').addEventListener('click', function () {
+  if (dangXemTruoc || dangTaiQS) return;   // 3.36: đang bày danh sách cũ, chưa có bản mới
   var khoa = Object.keys(chon);
   if (!khoa.length) return;
   if (luot && khoa.every(function (k) { return luot.dv.some(function (u) { return u.khoa === k; }); }) &&
@@ -976,6 +1116,7 @@ function luuNhap(u) {
              chi_tiet: u.nh.chi_tiet, moi_chon: u.nh.moi_chon, moi_tay: u.nh.moi_tay, so_moi_tay_sua: u.nh.so_moi_tay_sua,
              ghi_chu: u.nh.ghi_chu, ung_vien_da_xem: (u.ung_vien || []).map(function (x) { return x.ma_ld; }) };
   u.trang_thai_nhap = 'Đang lưu nháp…';
+  boSoQuanSo();   // 3.36: "có nháp" trên danh sách đơn vị đổi ngay sau lượt này
   goiAPI({ token: TOKEN_API, hanh_dong: 'qs_luu_nhap', ngay: luot.ngay, ma_ct: u.ma_ct, ca: u.ca, du_lieu: dl })
     .then(function (kq) {
       u.trang_thai_nhap = (kq && kq.ok) ? 'Đã lưu nháp lúc ' + kq.thoi_gian + '.'
@@ -1133,6 +1274,7 @@ function guiLuot() {
     if (s >= 8) $('dy_tt').textContent = 'Máy chủ đang ghi và gửi tin — ĐỪNG tải lại trang.';
   }, 1000);
   n.textContent = 'Đang chốt và gửi…';
+  boSoQuanSo();   // 3.36 chốt 2: chốt xong (kể cả chưa rõ) thì "đã báo / chưa báo" trong máy đã cũ
   goiAPI({ token: TOKEN_API, hanh_dong: 'qs_chot', ngay: luot.ngay, ma_yeu_cau: luot.maYC, ds: ds })
     .then(function (r) {
       if (!r) return;
