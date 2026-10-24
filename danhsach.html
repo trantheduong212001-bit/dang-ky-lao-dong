@@ -222,6 +222,7 @@
   <div class="doi-ngay">
     <button type="button" id="ng_mai">Ngày mai</button>
     <button type="button" id="ng_nay">Hôm nay</button>
+    <button type="button" id="ng_dem_qua">Ca đêm hôm qua</button>
   </div>
   <input id="tim" class="tim" placeholder="Gõ tên lao động, số điện thoại, hoặc tên người tuyển" autocomplete="off">
   <div id="dai_cho" class="cho an"></div>
@@ -468,7 +469,7 @@ function xemTruoc(cu) {
   hien('man_ds');
   $('ng_nay').classList.toggle('dang', cu.ngay === ngayCong(0));
   $('ng_mai').classList.toggle('dang', cu.ngay === ngayCong(1));
-  $('ng_nay').disabled = $('ng_mai').disabled = true;
+  $('ng_nay').disabled = $('ng_mai').disabled = $('ng_dem_qua').disabled = true;
   dsNgay = cu.kq.nhom || [];
   ve(cu.kq);
   demChon();
@@ -1070,13 +1071,14 @@ function moNgay(ngay) {
   nhoLai();
   $('ng_nay').classList.toggle('dang', ngay === ngayCong(0));
   $('ng_mai').classList.toggle('dang', ngay === ngayCong(1));
+  $('ng_dem_qua').classList.toggle('dang', laDemQua(ngay));
   $('dai_moi').classList.add('an');
   // 3.36: gói của trang chủ còn tươi cho đúng ngày này → vẽ luôn, không gọi máy chủ.
   var tuGoi = goiTuoi(ngay);
   // Có bản lần trước của ĐÚNG ngày này thì bày ra ngay, đừng để màn hình trống.
   var cu = tuGoi ? null : soCu(ngay);
   if (cu) {
-    dsNgay = cu.kq.nhom || [];
+    dsNgay = locNgay(cu.kq.nhom, ngay);
     ve(cu.kq);
     $('noi').classList.add('cu-mo');
     $('tom').textContent = (cu.kq.ngay_hien_thi || '') + ' — bản lúc ' + gioCua(cu.luc) +
@@ -1086,7 +1088,7 @@ function moNgay(ngay) {
     $('noi').innerHTML = '';
   }
   $('thanh').classList.add('an');
-  $('ng_nay').disabled = $('ng_mai').disabled = true;   // chặn bấm chồng, nó chỉ làm chậm thêm
+  $('ng_nay').disabled = $('ng_mai').disabled = $('ng_dem_qua').disabled = true;   // chặn bấm chồng, nó chỉ làm chậm thêm
   if (!tuGoi) batDongHo(!!cu);
   dangTaiDS = true;
 
@@ -1099,9 +1101,9 @@ function moNgay(ngay) {
     .then(function (kq) {
       if (!kq) return;
       if (!kq.ok) { $('tom').textContent = kq.loi || 'Không lấy được danh sách.'; return; }
-      dsNgay = kq.nhom || [];
+      dsNgay = locNgay(kq.nhom, ngay);
       ve(kq);
-      lucSoDS = tuGoi ? tuGoi.luc : new Date().getTime();
+      lucSoDS =tuGoi ? tuGoi.luc : new Date().getTime();
       nhoDanhSach(ngay, kq, lucSoDS);
       if (tuGoi) $('tom').textContent += ' · số lúc ' + gioCua(tuGoi.luc);   // chốt 1: số từ gói luôn ghi giờ
       demChon();          // đánh dấu chưa gửi nhớ từ lần trước phải hiện lên thanh dưới ngay
@@ -1116,9 +1118,24 @@ function moNgay(ngay) {
       dangTaiDS = false;
       tatDongHo();
       $('noi').classList.remove('cu-mo');
-      $('ng_nay').disabled = $('ng_mai').disabled = false;
+      $('ng_nay').disabled = $('ng_mai').disabled = $('ng_dem_qua').disabled = false;
     });
 }
+
+/* 3.36 — CA ĐÊM HÔM QUA (Dương yêu cầu 24/10/2026): ca đêm tính theo ngày BẮT ĐẦU ca, nên người ca đêm tối qua (sáng
+ * nay mới tan, mới đón xong) nằm ở danh sách HÔM QUA. Nút thứ ba mở hôm qua và CHỈ bày ca đêm. Máy chủ vẫn cho xem từ
+ * hôm qua và gửi theo mã phiếu — không đổi máy chủ. Gói trang chủ không có hôm qua nên bấm nút này là một lượt. */
+function laDemQua(ngay) { return ngay === ngayCong(-1); }
+function locNgay(nhom, ngay) {
+  if (!laDemQua(ngay)) return nhom || [];
+  return (nhom || []).map(function (g) {
+    var c = {};
+    for (var k in g) c[k] = g[k];
+    c.ds = (g.ds || []).filter(function (r) { return r.ca_lam === 'dem'; });
+    return c;
+  }).filter(function (g) { return g.ds.length; });
+}
+function nhanDem() { return laDemQua(ngayXem) ? 'Ca đêm · ' : ''; }
 
 /* 3.36 — LÀM MỚI NGẦM: quay lại trang (từ Zalo, từ trang chủ, mở lại ứng dụng) mà số trên màn hình đã quá 2 phút
  * thì lấy lại MỘT lượt. Đang có đánh dấu chưa gửi thì KHÔNG vẽ lại dưới tay người đang làm (hàng sẽ dời chỗ) —
@@ -1141,6 +1158,7 @@ function gioCua(ms) {
 }
 $('ng_nay').addEventListener('click', function () { moNgay(ngayCong(0)); });
 $('ng_mai').addEventListener('click', function () { moNgay(ngayCong(1)); });
+$('ng_dem_qua').addEventListener('click', function () { moNgay(ngayCong(-1)); });
 
 function ve(kq) {
   var tong = 0, daDon = 0;
@@ -1158,10 +1176,10 @@ function ve(kq) {
     });
   });
   var duoiCa = (caN || caD) ? (' · ngày ' + caN + ' · đêm ' + caD) : '';
-  $('tom').textContent = kq.ngay_hien_thi + ' — ' + tong + ' người, đã đón ' + daDon +
+  $('tom').textContent = nhanDem() + kq.ngay_hien_thi + ' — ' + tong + ' người, đã đón ' + daDon +
     duoiCa + ' · chưa đón lên đầu, A→Z' + (kq.tu_nho_tam ? ' · lấy từ bộ nhớ tạm' : '');
   if (!tong) {
-    $('noi').innerHTML = '<div class="trong">Ngày này chưa có ai trong danh sách.</div>';
+    $('noi').innerHTML = '<div class="trong">' + (laDemQua(ngayXem) ? 'Đêm qua không có ai đi ca đêm.' : 'Ngày này chưa có ai trong danh sách.') + '</div>';
     return;
   }
   var h = '';
@@ -1556,7 +1574,7 @@ function veLaiTatCa() {
       if (r.ca_lam === 'ngay') cN++; else if (r.ca_lam === 'dem') cD++;
     });
   });
-  $('tom').textContent = (ngayHienThiHienTai || '') + ' — ' + tong + ' người, đã đón ' + daDon +
+  $('tom').textContent = nhanDem() + (ngayHienThiHienTai || '') + ' — ' + tong + ' người, đã đón ' + daDon +
     ((cN || cD) ? (' · ngày ' + cN + ' · đêm ' + cD) : '') + ' · chưa đón lên đầu, A→Z';
   var h = '';
   dsNgay.forEach(function (g) {
@@ -1565,7 +1583,7 @@ function veLaiTatCa() {
          ' <span style="font-weight:400;color:var(--mo)">· ' + thoat(g.loai) + ' · ' + g.ds.length + ' người</span></div>';
     xepUuTien(g.ds).forEach(function (r) { h += veHang(r); });
   });
-  $('noi').innerHTML = h || '<div class="trong">Ngày này chưa có ai trong danh sách.</div>';
+  $('noi').innerHTML = h || '<div class="trong">' + (laDemQua(ngayXem) ? 'Đêm qua không có ai đi ca đêm.' : 'Ngày này chưa có ai trong danh sách.') + '</div>';
   apDungLoc();
 }
 
